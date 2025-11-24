@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <script>
+    // GitHub Pages SPA redirect for subdirectories
+    (function(l) {
+      // Handle query string redirects
+      if (l.search[1] === '/' ) {
+        var decoded = l.search.slice(1).split('&').map(function(s) { 
+          return s.replace(/~and~/g, '&')
+        }).join('?');
+        window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+        );
+      }
+      
+      // Handle dynamic routes for assessment pages
+      var path = l.pathname;
+      var basePath = '';
+      
+      // Detect if we're in a subdirectory (dev or test)
+      if (path.indexOf('/dev/') === 0) {
+        basePath = '/dev';
+        path = path.substring(4); // Remove /dev
+      } else if (path.indexOf('/test/') === 0) {
+        basePath = '/test';
+        path = path.substring(5); // Remove /test
+      }
+      
+      // Check if this is an assessment route that should be handled by Next.js
+      if (path.match(/^\/assessment\/[^\/]+(\/results)?\/?$/)) {
+        // Redirect to index.html with the path as a parameter
+        var redirectUrl = basePath + '/index.html?p=' + encodeURIComponent(path) + l.search.replace('?', '&') + l.hash;
+        window.location.replace(redirectUrl);
+      }
+    }(window.location))
+  </script>
+</head>
+<body></body>
+</html>
