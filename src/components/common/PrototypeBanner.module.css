@@ -1,0 +1,24 @@
+.banner {
+  background-color: #fef7e0;
+  border-left: 4px solid #f9c642;
+  color: #5c4317;
+}
+
+.bannerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  padding: 0 1rem;
+}
+
+.bannerIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.bannerText {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
