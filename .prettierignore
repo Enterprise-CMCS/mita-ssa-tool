@@ -1,0 +1,27 @@
+# Build artifacts
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Generated files
+*.d.ts
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Public assets
+public/
+
+# Package files
+package.json
+package-lock.json
+
+# Markdown files
+*.md
+
+# Config files
+*.config.js
