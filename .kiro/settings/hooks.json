@@ -1,0 +1,14 @@
+{
+  "hooks": [
+    {
+      "name": "Simple Test Hook",
+      "description": "A simple test hook to verify hook loading",
+      "trigger": {
+        "type": "manual",
+        "button_text": "Test Hook"
+      },
+      "prompt": "This is a simple test hook. If you can see this, hooks are working!",
+      "enabled": true
+    }
+  ]
+}
