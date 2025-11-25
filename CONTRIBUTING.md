@@ -5,7 +5,7 @@ Thank you for your interest in contributing! This project follows open-source be
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/mita-state-self-assessment-tool.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/mita-ssa-tool.git`
 3. Install dependencies: `npm install`
 4. Create a feature branch: `git checkout -b feature/your-feature-name`
 
