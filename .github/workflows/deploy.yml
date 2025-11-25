@@ -33,7 +33,7 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          NEXT_PUBLIC_BASE_PATH: /mita-state-self-assessment-tool
+          NEXT_PUBLIC_BASE_PATH: /mita-ssa-tool
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
