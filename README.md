@@ -51,8 +51,8 @@ The MITA State Self-Assessment Tool provides a guided workflow for evaluating Me
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/mita-state-self-assessment-tool.git
-cd mita-state-self-assessment-tool
+git clone https://github.com/username/mita-ssa-tool.git
+cd mita-ssa-tool
 
 # Install dependencies
 npm install
@@ -76,7 +76,7 @@ npm start
 ## Project Structure
 
 ```
-mita-state-self-assessment-tool/
+mita-ssa-tool/
 ├── public/content/      # MITA capability definitions (Markdown)
 ├── src/
 │   ├── components/      # React components
@@ -117,7 +117,7 @@ This runs formatting checks, linting, tests, and build verification. See [CONTRI
 
 The application deploys automatically to GitHub Pages when changes are pushed to `main`.
 
-**Live URL**: https://naretakis.github.io/mita-state-self-assessment-tool
+**Live URL**: [https://enterprise-cmcs.github.io/mita-ssa-tool]
 
 ### Setup
 1. Enable GitHub Pages in repository Settings > Pages
