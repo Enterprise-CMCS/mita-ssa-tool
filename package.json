@@ -7,7 +7,7 @@
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/mita-state-self-assessment-tool"
+    "url": "https://enterprise-cmcs.github.io/mita-ssa-tool/"
   },
   "type": "commonjs",
   "scripts": {
