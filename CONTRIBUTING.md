@@ -6,18 +6,22 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 ### Prerequisites
 
-- Node.js 18 or higher
+- **Node.js 22.18 or newer** — enforced in `engines` and pinned in `.nvmrc`. The offline workbook
+  generator is a TypeScript file Node executes directly and needs native type stripping; on an
+  older Node it fails with an unknown-file-extension error while `npm test` still passes, so the
+  failure shows up somewhere confusing
 - npm 9 or higher
 - Git
 - A modern code editor (VS Code recommended)
+- macOS with Microsoft Excel, **only** if you change the workbook generator — see Before Submitting
 
 ### Development Setup
 
 1. **Fork and clone the repository**
 
    ```bash
-   git clone https://github.com/YOUR-USERNAME/mita-4.0-ssa.git
-   cd mita-4.0-ssa/mita-4.0
+   git clone https://github.com/YOUR-USERNAME/mita-ssa-tool.git
+   cd mita-ssa-tool
    ```
 
 2. **Install dependencies**
@@ -69,7 +73,17 @@ src/
 ├── utils/               # Utility functions
 ├── constants/           # Application constants
 └── test/                # Test setup and utilities
+
+scripts/                 # Build-time tooling, TypeScript run directly by Node
+├── generate-xlsx-workbook.ts   # Generates the offline Excel workbook into public/
+├── verify-workbook-artifact.ts # Checks the copy that shipped into dist/
+├── verify-workbook-in-excel.ts # Verifies formulas by driving Excel (macOS only)
+└── xlsx/                # The generator's modules, with their own tests
 ```
+
+`scripts/` is covered by `typecheck`, `lint`, `knip` and `format:check` exactly like `src/`, and
+its tests run under `npm test`. It never ships — the workbook is generated at build time, so
+`exceljs` is a devDependency and stays out of the browser bundle.
 
 ### Key Concepts
 
@@ -326,10 +340,25 @@ refactor(services): extract scoring logic to separate module
    npm run lint
    npm run typecheck
    npm test
+   npm run audit:code     # knip — unused exports and dependencies
+   npm run format:check
    npm run build
    ```
 
-3. **Update documentation** if needed
+3. **If you changed the workbook generator, two more gates apply.** `npm test` proves the generator
+   emitted the formula string it intended; it cannot prove Excel computes the right answer from it,
+   and defects have shipped past a fully green suite because of exactly that gap.
+
+   ```bash
+   npm run generate:workbook
+   npm run verify:workbook-excel   # drives Excel, reads computed cells back. macOS + Excel, not in CI
+   node scripts/xlsx/prove-assertions.ts   # confirms each assertion can still fail; run on a clean tree
+   ```
+
+   `.kiro/steering/development-standards.md` §16 has the full rules, including why a criteria-based
+   `IF` over a range is unsafe and why post-2007 Excel functions need an `_xlfn.` prefix.
+
+4. **Update documentation** if needed
    - README.md for user-facing changes
    - CHANGELOG.md for all changes
    - JSDoc comments for new functions
@@ -339,9 +368,11 @@ refactor(services): extract scoring logic to separate module
 - [ ] All tests pass
 - [ ] No linting errors
 - [ ] TypeScript compiles without errors
+- [ ] `npm run audit:code` (knip) and `npm run format:check` clean
 - [ ] CHANGELOG.md updated
 - [ ] Documentation updated (if applicable)
 - [ ] Conventional commit messages used
+- [ ] If the workbook generator changed: `verify:workbook-excel` and `prove-assertions.ts` run
 
 ### PR Description Template
 

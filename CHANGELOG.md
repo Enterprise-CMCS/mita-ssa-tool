@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Dependency and tooling work only. **Nothing about the shipped application changed** — no version
+bump, because no byte a user receives is different. Recorded because the security posture is the
+part a reviewer asks about.
+
+### Security
+
+- **Both dependency trees are now at zero advisories**, production and full. The production tree
+  was already clean as of 4.1.0; this closes the remainder
+- Merged the upstream dependabot group update and reconciled it with this branch's dependency work.
+  Taking the higher range each time was not uniformly ours: upstream was ahead on `uuid`
+  (`^14.0.0`), this branch was ahead on `react-router-dom` (`^7.18.4`) and `vitest`
+  (`^4.1.11`). Taking upstream's `vitest@^4.1.8` would have reintroduced an advisory, since the
+  `@vitest/mocker` fix is exactly 4.1.11
+- `dompurify` 3.4.15 → 3.4.16, for a DOM XSS advisory published partway through the same working
+  session. Worth noting that an audit result is a snapshot, not a standing fact
+- `knip` 5 → 6 and `lint-staged` 15 → 16, clearing `fast-glob`, `braces` and `micromatch`
+  advisories. Both are build-time only and neither ships
+
+### Changed
+
+- `@types/uuid` removed. uuid ships its own types, so the DefinitelyTyped stub was redundant
+- **`exceljs` is pinned to `uuid@^11.1.1` via an `overrides` entry, and that pin must not be
+  widened.** uuid dropped CommonJS support at v12, and `exceljs` requires uuid through CJS, so
+  matching it to the top-level `^14.0.0` breaks workbook generation with `ERR_REQUIRE_ESM`. uuid
+  11.1.1 is itself the patched release, so this is a compatibility pin rather than a deferred
+  upgrade
+- Eight dead barrel re-exports removed from `src/hooks/index.ts` and `src/utils/index.ts`, surfaced
+  by knip 6. Every symbol involved is still in use — each is imported directly from its source
+  module, which is the documented convention — so only the unreachable re-export lines went
+
 ## [4.1.1] - 2026-09-22
 
 Follow-up to the 4.1.0 pilot deploy. 4.1.0 put the offline Excel workbook in the tool for the first

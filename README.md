@@ -79,15 +79,18 @@ Each aspect is rated on a 5-level maturity scale:
 
 ### Prerequisites
 
-- Node.js 18+
+- **Node.js 22.18 or newer** — enforced in `engines`, and pinned in `.nvmrc`. The offline workbook
+  generator is a TypeScript file Node runs directly, which needs native type stripping; on an older
+  Node it fails with an unknown-file-extension error while `npm test` still passes, so a too-old
+  Node fails in a confusing place
 - npm 9+
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/mita-4.0-ssa.git
-cd mita-4.0-ssa/mita-4.0
+git clone https://github.com/Enterprise-CMCS/mita-ssa-tool.git
+cd mita-ssa-tool
 
 # Install dependencies
 npm install
