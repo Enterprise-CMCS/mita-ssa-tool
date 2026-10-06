@@ -32,12 +32,11 @@ import type {
   OrbitRating,
   Attachment,
   MaturityLevelWithNA,
-  OrbitDimensionId,
-  OrganizationalAssessmentId,
   LevelKey,
 } from '../../types';
 import { MATURITY_LEVEL_NAMES } from '../../types';
 import { getAspect, getMaturityLevelMeta, getOrganizationalAspect } from '../../services/orbit';
+import { isOrganizationalDimensionId } from '../../constants';
 import { SCORE_COLORS } from '../../utils';
 
 /**
@@ -66,12 +65,24 @@ interface DimensionScoresTableWithTargetProps {
 }
 
 /**
- * Get color for score - uses primary blue for As-Is/To-Be comparison view
+ * Colour for an As-Is chip in this view.
+ *
+ * Deliberately a single blue rather than the banded `SCORE_COLORS` scale: this
+ * table's job is As-Is vs To-Be comparison, so banding both columns by score
+ * would compete with the comparison. `SCORE_COLORS.developing` is reused rather
+ * than a local hex so there is one blue to keep compliant — the previous
+ * `#1976d2` cleared 4.5:1 only barely, at 4.60:1.
  */
 function getScoreColor(score: number | null): string {
   if (score === null) return SCORE_COLORS.none;
-  return '#1976d2'; // Use primary blue for all scores in comparison view
+  return SCORE_COLORS.developing;
 }
+
+/**
+ * Colour for a To-Be chip. `SCORE_COLORS.excellent` (5.13:1 on white) replaces a
+ * hardcoded `#4caf50`, which measured 2.78:1 as chip text and as a border.
+ */
+const TO_BE_COLOR = SCORE_COLORS.excellent;
 
 /**
  * Get maturity level display with name
@@ -114,19 +125,9 @@ function AspectDetailRow({
   onDownloadAttachment: (attachment: Attachment) => void;
 }): JSX.Element {
   // Get aspect name from ORBIT model - handle both standard and organizational assessments
-  let aspect;
-  if (rating.dimensionId === 'outcomes' || rating.dimensionId === 'roles') {
-    aspect = getOrganizationalAspect(
-      rating.dimensionId as OrganizationalAssessmentId,
-      rating.aspectId
-    );
-  } else {
-    aspect = getAspect(
-      rating.dimensionId as OrbitDimensionId,
-      rating.aspectId,
-      rating.subDimensionId
-    );
-  }
+  const aspect = isOrganizationalDimensionId(rating.dimensionId)
+    ? getOrganizationalAspect(rating.dimensionId, rating.aspectId)
+    : getAspect(rating.dimensionId, rating.aspectId, rating.subDimensionId);
   const aspectName = aspect?.name ?? rating.aspectId;
   const ratingAttachments = attachments.filter((a) => a.orbitRatingId === rating.id);
   const hasNotes = rating.notes.trim().length > 0;
@@ -164,8 +165,8 @@ function AspectDetailRow({
             variant="outlined"
             sx={{
               borderColor:
-                rating.targetLevel && rating.targetLevel > 0 ? '#4caf50' : 'text.disabled',
-              color: rating.targetLevel && rating.targetLevel > 0 ? '#4caf50' : 'text.secondary',
+                rating.targetLevel && rating.targetLevel > 0 ? TO_BE_COLOR : 'text.disabled',
+              color: rating.targetLevel && rating.targetLevel > 0 ? TO_BE_COLOR : 'text.secondary',
               fontWeight: 600,
             }}
           />
@@ -362,7 +363,10 @@ function DimensionRow({
               }}
               aria-expanded={open}
               aria-controls={detailsId}
-              aria-label={`${dimensionName}, ${assessedCount} of ${totalCount} assessed, As-Is ${averageLevel?.toFixed(1) ?? 'none'}, To-Be ${targetLevel?.toFixed(1) ?? 'none'}. Press Enter to ${open ? 'collapse' : 'expand'} details.`}
+              /* Name is just the dimension: `aria-expanded` already conveys
+                 state, the `button` role implies activation, and the counts and
+                 scores are in adjacent cells a screen reader reads anyway. */
+              aria-label={dimensionName}
               sx={{
                 all: 'unset',
                 cursor: 'pointer',
@@ -436,7 +440,7 @@ function DimensionRow({
               label={targetLevel.toFixed(1)}
               size="small"
               variant="outlined"
-              sx={{ borderColor: '#4caf50', color: '#4caf50', fontWeight: 600 }}
+              sx={{ borderColor: TO_BE_COLOR, color: TO_BE_COLOR, fontWeight: 600 }}
             />
           ) : (
             <Typography variant="body2" color="text.disabled">
@@ -548,7 +552,7 @@ function TechnologyDimensionRows({
             }}
             aria-expanded={parentOpen}
             aria-controls="technology-subdimensions"
-            aria-label={`Technology, ${assessedAspects} of ${totalAspects} assessed, As-Is ${dim.averageLevel?.toFixed(1) ?? 'none'}, To-Be ${targetLevel?.toFixed(1) ?? 'none'}. Press Enter to ${parentOpen ? 'collapse' : 'expand'} sub-dimensions.`}
+            aria-label="Technology"
             sx={{
               all: 'unset',
               cursor: 'pointer',
@@ -592,7 +596,7 @@ function TechnologyDimensionRows({
               label={targetLevel.toFixed(1)}
               size="small"
               variant="outlined"
-              sx={{ borderColor: '#4caf50', color: '#4caf50', fontWeight: 600 }}
+              sx={{ borderColor: TO_BE_COLOR, color: TO_BE_COLOR, fontWeight: 600 }}
             />
           ) : (
             <Typography variant="body2" color="text.disabled">
@@ -657,7 +661,11 @@ export function DimensionScoresTableWithTarget({
   return (
     <Paper>
       <Box sx={{ p: 2 }}>
-        <Typography variant="h6">Dimension Scores</Typography>
+        {/* Nested under the detail panel's <h2> title in ResultsMasterDetail,
+            this component's only consumer. */}
+        <Typography variant="h6" component="h3">
+          Dimension Scores
+        </Typography>
         <Typography variant="body2" color="text.secondary">
           Click a dimension to see aspect-level details
         </Typography>

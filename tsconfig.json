@@ -34,6 +34,6 @@
     /* Types */
     "types": ["vitest/globals"]
   },
-  "include": ["src", "vite.config.ts"],
+  "include": ["src", "scripts", "vite.config.ts"],
   "exclude": ["vitest.config.ts"]
 }

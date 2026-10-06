@@ -102,11 +102,6 @@ export default function Dashboard(): JSX.Element {
     [getAssessmentForArea, navigate]
   );
 
-  const handleExportAssessment = useCallback((_areaId: string) => {
-    // TODO: Implement export in Phase 7
-    showSnackbar('Export functionality coming soon', 'success');
-  }, []);
-
   const handleDeleteAssessment = useCallback((areaId: string) => {
     const area = getAreaById(areaId);
     if (area) {
@@ -213,7 +208,6 @@ export default function Dashboard(): JSX.Element {
         onResumeAssessment={handleResumeAssessment}
         onEditAssessment={handleEditAssessment}
         onViewAssessment={handleViewAssessment}
-        onExportAssessment={handleExportAssessment}
         onDeleteAssessment={handleDeleteAssessment}
         onViewHistory={handleViewHistory}
         onDeleteHistory={handleDeleteHistory}

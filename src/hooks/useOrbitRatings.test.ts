@@ -360,6 +360,174 @@ describe('useOrbitRatings', () => {
     });
   });
 
+  /**
+   * Regression: OBS-6. The three text updaters previously bailed out when no
+   * rating row existed, so text typed before a maturity level was chosen was
+   * silently discarded — while the save indicator still reported success.
+   */
+  describe('text fields with no existing rating (OBS-6)', () => {
+    const textFieldCases = [
+      { method: 'updateNotes', field: 'notes' },
+      { method: 'updateBarriers', field: 'barriers' },
+      { method: 'updatePlans', field: 'plans' },
+    ] as const;
+
+    it.each(textFieldCases)(
+      '$method creates the rating instead of discarding the text',
+      async ({ method, field }) => {
+        // No need to wait for the live query: the update path resolves the row
+        // straight from IndexedDB and never reads `ratings`. Gating on an emission
+        // here only made the test sensitive to liveQuery scheduling (see OBS-27).
+        const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+        await act(async () => {
+          await result.current[method](
+            'businessArchitecture',
+            'business-process-performance',
+            'Typed before picking a level'
+          );
+        });
+
+        const stored = await db.orbitRatings
+          .where('capabilityAssessmentId')
+          .equals(assessmentId)
+          .toArray();
+
+        expect(stored).toHaveLength(1);
+        expect(stored[0]?.[field]).toBe('Typed before picking a level');
+        // Created unassessed, so it cannot affect progress or scores
+        expect(stored[0]?.currentLevel).toBe(0);
+      }
+    );
+
+    it('does not count a notes-only rating as assessed', async () => {
+      const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+      await act(async () => {
+        await result.current.updateNotes(
+          'businessArchitecture',
+          'business-process-performance',
+          'Just a note'
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.ratings).toHaveLength(1);
+      });
+
+      expect(result.current.getAssessedCount()).toBe(0);
+      expect(result.current.getAssessedCountForDimension('businessArchitecture')).toBe(0);
+      expect(result.current.getAverageLevelForDimension('businessArchitecture')).toBeNull();
+    });
+
+    it('preserves the other text fields when creating a rating', async () => {
+      const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+      await act(async () => {
+        await result.current.updateBarriers(
+          'information',
+          'information-quality',
+          'Legacy system limits'
+        );
+      });
+
+      const stored = await db.orbitRatings
+        .where('capabilityAssessmentId')
+        .equals(assessmentId)
+        .first();
+
+      expect(stored?.barriers).toBe('Legacy system limits');
+      expect(stored?.notes).toBe('');
+      expect(stored?.plans).toBe('');
+    });
+
+    it('patches only the target field on an existing rating', async () => {
+      await db.orbitRatings.add({
+        id: 'r1',
+        capabilityAssessmentId: assessmentId,
+        dimensionId: 'businessArchitecture',
+        aspectId: 'business-process-performance',
+        currentLevel: 4,
+        questionResponses: [],
+        evidenceResponses: [],
+        notes: 'Keep me',
+        barriers: '',
+        plans: 'Keep me too',
+        carriedForward: false,
+        attachmentIds: [],
+        updatedAt: new Date(),
+      });
+
+      const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+      await waitFor(() => {
+        expect(result.current.ratings).toHaveLength(1);
+      });
+
+      await act(async () => {
+        await result.current.updateBarriers(
+          'businessArchitecture',
+          'business-process-performance',
+          'Only this changes'
+        );
+      });
+
+      const stored = await db.orbitRatings.get('r1');
+      expect(stored?.barriers).toBe('Only this changes');
+      expect(stored?.notes).toBe('Keep me');
+      expect(stored?.plans).toBe('Keep me too');
+      expect(stored?.currentLevel).toBe(4);
+    });
+
+    it('does not create an empty rating when the value is blank', async () => {
+      const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+      await act(async () => {
+        await result.current.updateNotes('information', 'information-quality', '');
+      });
+
+      await expect(db.orbitRatings.count()).resolves.toBe(0);
+    });
+
+    it('bumps the assessment timestamp so text-only edits affect ordering', async () => {
+      const before = await db.capabilityAssessments.get(assessmentId);
+      const originalUpdatedAt = before?.updatedAt.getTime() ?? 0;
+
+      const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+      // Ensure a measurable difference regardless of clock granularity
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      await act(async () => {
+        await result.current.updatePlans('information', 'information-quality', 'Migrate in FY27');
+      });
+
+      const after = await db.capabilityAssessments.get(assessmentId);
+      expect(after?.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt);
+    });
+
+    it('preserves the technology sub-dimension when creating a rating', async () => {
+      const { result } = renderHook(() => useOrbitRatings(assessmentId));
+
+      await act(async () => {
+        await result.current.updateNotes(
+          'technology',
+          'modular-architecture',
+          'Monolith today',
+          'applicationManagement'
+        );
+      });
+
+      const stored = await db.orbitRatings
+        .where('capabilityAssessmentId')
+        .equals(assessmentId)
+        .first();
+
+      expect(stored?.subDimensionId).toBe('applicationManagement');
+      expect(stored?.notes).toBe('Monolith today');
+    });
+  });
+
   describe('updateBarriers', () => {
     it('should update barriers for existing rating', async () => {
       await db.orbitRatings.add({

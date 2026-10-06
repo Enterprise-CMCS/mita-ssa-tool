@@ -195,5 +195,85 @@ describe('scoring', () => {
         expect(calculateDimensionScore('technology', ratings)).toBe(3.5);
       });
     });
+
+    /**
+     * The To-Be roll-up goes through the same function as As-Is, via `levelField`,
+     * so the two cannot drift apart. Before Wave 5 there was no canonical To-Be
+     * scorer at all and each caller flat-averaged `targetLevel` itself.
+     */
+    describe('levelField: targetLevel', () => {
+      it('defaults to currentLevel, leaving every existing caller unchanged', () => {
+        const ratings = [
+          { currentLevel: 2, targetLevel: 5 },
+          { currentLevel: 4, targetLevel: 5 },
+        ];
+
+        expect(calculateDimensionScore('information', ratings)).toBe(3);
+        expect(calculateDimensionScore('information', ratings, 'currentLevel')).toBe(3);
+      });
+
+      it('scores the To-Be column when asked', () => {
+        const ratings = [
+          { currentLevel: 2, targetLevel: 4 },
+          { currentLevel: 2, targetLevel: 5 },
+        ];
+
+        expect(calculateDimensionScore('information', ratings, 'targetLevel')).toBe(4.5);
+      });
+
+      it('weights Technology To-Be by sub-dimension, not by aspect count', () => {
+        // Six Infrastructure targets at 5 and five Application targets at 1.
+        // Canonical: mean(5, 1) = 3.0. A flat mean over 11 would give 3.2.
+        const ratings = [
+          ...Array.from({ length: 6 }, () => ({
+            currentLevel: 0,
+            targetLevel: 5,
+            subDimensionId: 'technologyInfrastructureManagement',
+          })),
+          ...Array.from({ length: 5 }, () => ({
+            currentLevel: 0,
+            targetLevel: 1,
+            subDimensionId: 'applicationManagement',
+          })),
+        ];
+
+        expect(calculateDimensionScore('technology', ratings, 'targetLevel')).toBe(3);
+      });
+
+      it('treats an absent target as unassessed rather than as zero', () => {
+        // The sentinel that matters most: `targetLevel` is optional, so a rating with
+        // an As-Is level and no target must be excluded from the To-Be average. Were
+        // `undefined` coerced to 0 and counted, this would be 2 rather than 4.
+        const ratings = [{ currentLevel: 3, targetLevel: 4 }, { currentLevel: 3 }];
+
+        expect(calculateDimensionScore('information', ratings, 'targetLevel')).toBe(4);
+      });
+
+      it('excludes N/A targets', () => {
+        const ratings = [
+          { currentLevel: 3, targetLevel: 4 },
+          { currentLevel: 3, targetLevel: -1 },
+        ];
+
+        expect(calculateDimensionScore('information', ratings, 'targetLevel')).toBe(4);
+      });
+
+      it('returns null when nothing has a target', () => {
+        const ratings = [{ currentLevel: 3 }, { currentLevel: 4 }];
+
+        expect(calculateDimensionScore('information', ratings, 'targetLevel')).toBeNull();
+      });
+
+      it('scores As-Is and To-Be independently on the same ratings', () => {
+        // Guards against the level selector leaking between the two calls.
+        const ratings = [
+          { currentLevel: 1, targetLevel: 5 },
+          { currentLevel: 1, targetLevel: 5 },
+        ];
+
+        expect(calculateDimensionScore('information', ratings)).toBe(1);
+        expect(calculateDimensionScore('information', ratings, 'targetLevel')).toBe(5);
+      });
+    });
   });
 });

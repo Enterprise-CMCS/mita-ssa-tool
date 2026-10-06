@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maskable PWA icon source.
+
+  Separate from `favicon.svg` for two reasons, both required by the maskable spec:
+
+  1. **Full bleed, no rounded corners.** The platform applies its own mask — a circle on Android,
+     a squircle on iOS. Rounded corners baked into the image show as a visible inset inside that
+     mask.
+  2. **Glyph inside the central 80%.** Anything outside a 409px-diameter circle on a 512 canvas
+     can be cropped, so the bars are scaled to ~55% of the canvas rather than the 50-75% span
+     `favicon.svg` uses. Measured against the safe zone: the bar block spans x 154-358 and
+     y 179-358, which sits inside the circle of radius 205 centred at 256.
+
+  Kept in `assets/icons/` rather than `public/` because it is a build-time source, never served.
+  Vite copies `public/` into the published site verbatim — and the service worker precaches it — so
+  a source file left there would be downloaded by every pilot user for no reason.
+
+  Generated to PNG; see `docs/ICONS.md`.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
+     role="img" aria-label="MITA State Self-Assessment Tool">
+  <title>MITA State Self-Assessment Tool</title>
+  <rect width="512" height="512" fill="#0071bc" />
+  <g fill="#ffffff">
+    <rect x="154" y="307" width="29" height="51" rx="5" />
+    <rect x="198" y="272" width="29" height="86" rx="5" />
+    <rect x="242" y="237" width="29" height="121" rx="5" />
+    <rect x="286" y="202" width="29" height="156" rx="5" />
+    <rect x="330" y="179" width="29" height="179" rx="5" />
+  </g>
+</svg>

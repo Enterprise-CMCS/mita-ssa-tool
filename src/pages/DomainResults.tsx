@@ -167,8 +167,10 @@ export default function DomainResults(): JSX.Element {
 
         {/* Domain Score */}
         <Paper sx={{ p: 3, textAlign: 'center', minWidth: 140 }}>
+          {/* A score value, not a section heading. */}
           <Typography
             variant="h2"
+            component="p"
             sx={{ fontWeight: 700, color: getScoreColor(domainScore), lineHeight: 1 }}
           >
             {domainScore?.toFixed(1) ?? '—'}
@@ -187,10 +189,12 @@ export default function DomainResults(): JSX.Element {
           </Typography>
           <Box
             sx={{ height: Math.max(200, areaScores.filter((a) => a.score !== null).length * 40) }}
-            role="img"
-            aria-label="Horizontal bar chart showing maturity scores for each capability area"
           >
-            <Bar data={chartData} options={chartOptions} />
+            <Bar
+              data={chartData}
+              options={chartOptions}
+              aria-label="Horizontal bar chart showing maturity scores for each capability area"
+            />
           </Box>
         </Paper>
       )}

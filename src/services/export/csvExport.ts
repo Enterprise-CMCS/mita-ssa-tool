@@ -7,10 +7,35 @@
  * organizational assessments (Outcomes/Roles with direct aspects).
  */
 
+import { DRAFT_NOTICE_LABEL, DRAFT_NOTICE_LINE, IS_DRAFT } from '../../constants';
 import type { MaturityProfile, CapabilityAreaProfile } from './types';
 
 /** CSV column headers for standard assessments */
 const CSV_HEADERS_STANDARD = 'ORBIT,As Is,To Be,Notes,Barriers & Challenges,Advancement Plans';
+
+/**
+ * Prefixes that identify a notice line in a generated profile, so the parser can skip
+ * it rather than read it as a data row.
+ *
+ * More than one on purpose. `DRAFT:` was the prefix before CMS supplied the
+ * predecisional wording, and a profile exported under the old copy must keep parsing —
+ * dropping it would make previously exported files silently unreadable, which is the
+ * cost of treating a wire format as presentation. Add to this list, never replace it.
+ */
+const NOTICE_CSV_PREFIXES = [`${DRAFT_NOTICE_LABEL}:`, 'DRAFT:'] as const;
+
+/**
+ * Emits the draft notice line, or nothing when the tool is built for go-live.
+ *
+ * Placement is constrained: this must sit *below* the
+ * `MITA 4.0 Maturity Profile: <state>` header, never above it, because
+ * `parseMaturityProfileCsv` reads the state name from `lines[0]` specifically. A
+ * notice on the first line would make every parsed state name `Unknown`.
+ */
+function draftNoticeLines(): string[] {
+  if (!IS_DRAFT) return [];
+  return [`${escapeCSVField(DRAFT_NOTICE_LINE)},,,,,`];
+}
 
 /** CSV column headers for organizational assessments */
 const CSV_HEADERS_ORGANIZATIONAL =
@@ -28,6 +53,7 @@ export function generateMaturityProfileCsv(profile: MaturityProfile): string {
 
   // Header row with state name
   lines.push(`MITA 4.0 Maturity Profile: ${profile.stateName},,,,,`);
+  lines.push(...draftNoticeLines());
   lines.push(',,,,,');
 
   // Generate section for each capability area
@@ -57,11 +83,16 @@ function generateAreaSection(area: CapabilityAreaProfile): string[] {
   lines.push(isOrganizational ? CSV_HEADERS_ORGANIZATIONAL : CSV_HEADERS_STANDARD);
 
   if (isOrganizational) {
-    // For organizational assessments, output aspect rows directly
+    // For organizational assessments, output section label rows followed by
+    // their aspect rows (Outcomes, Roles, Enterprise Architecture)
     for (const row of area.rows) {
-      lines.push(
-        `${row.dimension},${row.asIs},${row.toBe},${escapeCSVField(row.notes)},${escapeCSVField(row.barriers)},${escapeCSVField(row.plans)}`
-      );
+      if (row.isSectionLabel) {
+        lines.push(`Section: ${escapeCSVField(row.dimension)},,,,,`);
+      } else {
+        lines.push(
+          `${row.dimension},${row.asIs},${row.toBe},${escapeCSVField(row.notes)},${escapeCSVField(row.barriers)},${escapeCSVField(row.plans)}`
+        );
+      }
     }
   } else {
     // For standard assessments, ensure all B-I-T dimensions are present in order
@@ -93,6 +124,7 @@ export function generateCombinedMaturityProfileCsv(
 
   // Header row with state name
   lines.push(`MITA 4.0 Maturity Profile: ${stateName},,,,,`);
+  lines.push(...draftNoticeLines());
   lines.push(',,,,,');
 
   // Generate sections for all areas across all domains
@@ -154,6 +186,18 @@ export function parseMaturityProfileCsv(csv: string): MaturityProfile | null {
       continue;
     }
 
+    // Skip the disclaimer notice that sits directly below the state header.
+    //
+    // Matched by content rather than by the current `IS_DRAFT` value on purpose: a
+    // profile exported during the pilot may be imported after go-live, when the
+    // flag is off, and it would still carry the line. The leading-quote case covers
+    // the notice being CSV-escaped, which the current wording requires — it contains
+    // commas, so `escapeCSVField` wraps it in quotes.
+    const unquoted = line.startsWith('"') ? line.slice(1) : line;
+    if (NOTICE_CSV_PREFIXES.some((prefix) => unquoted.startsWith(prefix))) {
+      continue;
+    }
+
     // Check for domain header
     const domainMatch = line.match(/^Capability Domain:\s*([^,]+)/);
     if (domainMatch) {
@@ -175,6 +219,12 @@ export function parseMaturityProfileCsv(csv: string): MaturityProfile | null {
     // Check for column headers (ORBIT for standard, Aspect for organizational)
     if (line.startsWith('ORBIT,') || line.startsWith('Aspect,')) {
       inDataSection = true;
+      continue;
+    }
+
+    // Skip organizational section label rows (e.g., "Section: Organizational
+    // Outcomes") - they group aspect rows but carry no rating data
+    if (line.startsWith('Section:')) {
       continue;
     }
 

@@ -94,6 +94,41 @@ db.version(3)
     await tx.table('tags').clear();
   });
 
+/**
+ * Database schema v4 — Capability model restructure (July 2026)
+ *
+ * Schema is unchanged but all data is cleared because the capability
+ * reference model was restructured:
+ *   - 16 domains / 66 areas -> 14 domains / 72 areas
+ *   - Several capability area ids renamed (e.g., provider-screening ->
+ *     provider-eligibility) and Waiver Management moved between domains
+ *   - The three organizational assessment areas merged into the single
+ *     "enterprise-governance" area (Enterprise Architecture domain,
+ *     Strategic layer)
+ *   - Business Relationship Management and Enterprise Governance domains
+ *     removed; category tier removed from Data Management and Technology
+ *     Management
+ *
+ * Existing assessment data references area ids that no longer exist and is
+ * incompatible with the new model.
+ */
+db.version(4)
+  .stores({
+    capabilityAssessments: 'id, capabilityAreaId, capabilityDomainId, status, updatedAt, *tags',
+    orbitRatings:
+      'id, capabilityAssessmentId, [capabilityAssessmentId+dimensionId+aspectId], [capabilityAssessmentId+dimensionId+subDimensionId+aspectId]',
+    attachments: 'id, capabilityAssessmentId, orbitRatingId, uploadedAt',
+    assessmentHistory: 'id, capabilityAssessmentId, capabilityAreaId, snapshotDate',
+    tags: 'id, name, usageCount, lastUsed',
+  })
+  .upgrade(async (tx) => {
+    await tx.table('capabilityAssessments').clear();
+    await tx.table('orbitRatings').clear();
+    await tx.table('attachments').clear();
+    await tx.table('assessmentHistory').clear();
+    await tx.table('tags').clear();
+  });
+
 export { db };
 
 /**

@@ -174,7 +174,9 @@ export function AttachmentUpload({
 
   return (
     <Box>
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+      {/* A real subsection heading. The enclosing aspect accordion is an <h3>
+          (MuiAccordion-heading), so this is the next level down. */}
+      <Typography variant="subtitle2" component="h4" color="text.secondary" gutterBottom>
         Attachments
       </Typography>
 
@@ -183,7 +185,11 @@ export function AttachmentUpload({
         variant="outlined"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        role="region"
+        // `group`, not `region`: this component renders once per aspect, so a
+        // landmark would appear many times per page with an identical name
+        // (axe `landmark-unique`). `group` still carries the accessible name
+        // without claiming page-level navigational structure.
+        role="group"
         aria-label="File upload area"
         sx={{
           p: 2,

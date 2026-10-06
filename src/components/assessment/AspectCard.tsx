@@ -172,7 +172,15 @@ export function AspectCard({
             )}
           </Box>
           <Box sx={{ flex: 1, minWidth: 150 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 500, wordBreak: 'break-word' }}>
+            {/* MUI wraps AccordionSummary in <h3 class="MuiAccordion-heading">,
+                so this must not itself be a heading - subtitle1 would render a
+                nested <h6> inside that <h3>. `span` rather than `p` because <h3>
+                takes phrasing content only; `display: block` keeps the layout. */}
+            <Typography
+              variant="subtitle1"
+              component="span"
+              sx={{ display: 'block', fontWeight: 500, wordBreak: 'break-word' }}
+            >
               {aspect.name}
             </Typography>
             <Typography
@@ -213,7 +221,13 @@ export function AspectCard({
         </Box>
       </AccordionSummary>
 
-      <AccordionDetails sx={{ p: 3 }} id={`aspect-${aspect.id}-content`} role="region">
+      {/* No `role="region"` or `id` here. MUI's Accordion already renders a
+          `div.MuiAccordion-region` wrapper carrying `role="region"`,
+          `id={aria-controls}` and `aria-labelledby={summary id}`. Setting them
+          again on AccordionDetails produced a second identically-named landmark
+          AND a duplicate DOM id (`aspect-<id>-content` appeared twice), which
+          only shows up once a panel is expanded. */}
+      <AccordionDetails sx={{ p: 3 }}>
         {/* Maturity Level Selector - Dual As-Is / To-Be */}
         <Box sx={{ mb: 3 }}>
           <MaturityLevelSelector

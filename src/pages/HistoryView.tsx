@@ -17,26 +17,56 @@ import {
   getAspectsForDimension,
   getAspectsForSubDimension,
   getAggregatedDimensionForDomain,
+  getOrganizationalAspects,
 } from '../services/orbit';
+import { getOrganizationalSections } from '../constants';
 import { AssessmentSidebar, DimensionPage, AggregateDimensionView } from '../components/assessment';
 import type {
   OrbitDimensionId,
   TechnologySubDimensionId,
   OrbitRating,
   HistoricalRating,
+  OrganizationalAssessmentId,
 } from '../types';
 
 /**
  * Navigation item for sidebar
+ * Supports both standard dimension navigation and organizational aspect navigation
  */
 interface NavItem {
-  dimensionId: OrbitDimensionId;
+  /** For standard assessments: the ORBIT dimension ID */
+  dimensionId?: OrbitDimensionId;
+  /** For Technology sub-dimensions */
   subDimensionId?: TechnologySubDimensionId;
+  /** For organizational assessments: the section type */
+  organizationalType?: OrganizationalAssessmentId;
+  /** For organizational assessments: the aspect ID being navigated to */
+  aspectId?: string;
   name: string;
   description: string;
   isRequired: boolean;
   aspectCount: number;
   isAggregate?: boolean;
+  isOrganizational?: boolean;
+}
+
+/**
+ * Build navigation items for the combined organizational assessment.
+ * Mirrors the Assessment page: aspects listed directly, grouped by section.
+ * @param sections - The organizational assessment sections
+ */
+function buildOrganizationalNavItems(sections: OrganizationalAssessmentId[]): NavItem[] {
+  return sections.flatMap((section) =>
+    getOrganizationalAspects(section).map((aspect) => ({
+      organizationalType: section,
+      aspectId: aspect.id,
+      name: aspect.name,
+      description: aspect.description,
+      isRequired: true,
+      aspectCount: 1,
+      isOrganizational: true,
+    }))
+  );
 }
 
 /**
@@ -62,7 +92,8 @@ function buildNavItems(domainId?: string): NavItem[] {
         ? `Aggregate ${dim.name} score from all finalized capability assessments`
         : dim.description,
       isRequired: dim.required,
-      aspectCount: dim.aspects.length,
+      // Aggregate dimensions have no manually assessable aspects
+      aspectCount: isAggregate ? 0 : dim.aspects.length,
       isAggregate,
     });
   }
@@ -78,7 +109,7 @@ function buildNavItems(domainId?: string): NavItem[] {
       name: techDim.name,
       description: `Aggregate ${techDim.name} score from all finalized capability assessments`,
       isRequired: true,
-      aspectCount: techDim.subDimensions.reduce((sum, sd) => sum + sd.aspects.length, 0),
+      aspectCount: 0, // No aspects to assess - it's aggregate
       isAggregate: true,
     });
   } else {
@@ -145,11 +176,19 @@ export default function HistoryView(): JSX.Element {
     return getAreaWithDomain(historyEntry.capabilityAreaId);
   }, [historyEntry]);
 
+  // Detect the combined organizational assessment
+  const organizationalSections = useMemo(() => {
+    if (!historyEntry) return null;
+    return getOrganizationalSections(historyEntry.capabilityAreaId);
+  }, [historyEntry]);
+
   // Navigation state - build with domain ID for aggregate detection
-  const navItems = useMemo(
-    () => buildNavItems(capabilityInfo?.domain.id),
-    [capabilityInfo?.domain.id]
-  );
+  const navItems = useMemo(() => {
+    if (organizationalSections) {
+      return buildOrganizationalNavItems(organizationalSections);
+    }
+    return buildNavItems(capabilityInfo?.domain.id);
+  }, [capabilityInfo?.domain.id, organizationalSections]);
   const [currentNavIndex, setCurrentNavIndex] = useState(0);
   const currentNav = navItems[currentNavIndex] ?? navItems[0];
 
@@ -164,14 +203,22 @@ export default function HistoryView(): JSX.Element {
     const map = new Map<string, OrbitRating>();
     if (!currentNav) return map;
     for (const rating of ratings) {
-      if (currentNav.subDimensionId) {
+      if (currentNav.isOrganizational && currentNav.organizationalType && currentNav.aspectId) {
+        // Organizational aspect: match by section and aspect
+        if (
+          rating.dimensionId === currentNav.organizationalType &&
+          rating.aspectId === currentNav.aspectId
+        ) {
+          map.set(rating.aspectId, rating);
+        }
+      } else if (currentNav.subDimensionId) {
         if (
           rating.dimensionId === currentNav.dimensionId &&
           rating.subDimensionId === currentNav.subDimensionId
         ) {
           map.set(rating.aspectId, rating);
         }
-      } else {
+      } else if (currentNav.dimensionId) {
         if (rating.dimensionId === currentNav.dimensionId && !rating.subDimensionId) {
           map.set(rating.aspectId, rating);
         }
@@ -180,13 +227,21 @@ export default function HistoryView(): JSX.Element {
     return map;
   }, [ratings, currentNav]);
 
-  // Get aspects for current dimension
+  // Get aspects for current dimension/organizational aspect
   const currentAspects = useMemo(() => {
     if (!currentNav) return [];
+    if (currentNav.isOrganizational && currentNav.organizationalType && currentNav.aspectId) {
+      const aspects = getOrganizationalAspects(currentNav.organizationalType);
+      const aspect = aspects.find((a) => a.id === currentNav.aspectId);
+      return aspect ? [aspect] : [];
+    }
     if (currentNav.subDimensionId) {
       return getAspectsForSubDimension(currentNav.subDimensionId);
     }
-    return getAspectsForDimension(currentNav.dimensionId);
+    if (currentNav.dimensionId) {
+      return getAspectsForDimension(currentNav.dimensionId);
+    }
+    return [];
   }, [currentNav]);
 
   // Calculate sidebar progress data
@@ -196,8 +251,35 @@ export default function HistoryView(): JSX.Element {
       const totalCount = nav.aspectCount;
       let avgScore: number | null = null;
 
+      // For organizational aspects, calculate per-aspect progress
+      if (nav.isOrganizational && nav.organizationalType && nav.aspectId) {
+        const aspectRating = ratings.find(
+          (r) => r.dimensionId === nav.organizationalType && r.aspectId === nav.aspectId
+        );
+        const isAssessed = aspectRating ? aspectRating.currentLevel !== 0 : false;
+        const score =
+          aspectRating && aspectRating.currentLevel > 0 ? aspectRating.currentLevel : null;
+
+        return {
+          dimensionId: nav.organizationalType as OrbitDimensionId, // Cast for sidebar compatibility
+          aspectId: nav.aspectId,
+          name: nav.name,
+          assessedCount: isAssessed ? 1 : 0,
+          totalCount: 1,
+          averageScore: score,
+          isRequired: nav.isRequired,
+          isAggregate: false,
+          isOrganizational: true,
+          organizationalType: nav.organizationalType,
+        };
+      }
+
       // For aggregate dimensions, use stored aggregate data from snapshot
-      if (nav.isAggregate && historyEntry?.aggregateData?.dimensionId === nav.dimensionId) {
+      if (
+        nav.isAggregate &&
+        nav.dimensionId &&
+        historyEntry?.aggregateData?.dimensionId === nav.dimensionId
+      ) {
         return {
           dimensionId: nav.dimensionId,
           subDimensionId: nav.subDimensionId,
@@ -244,6 +326,17 @@ export default function HistoryView(): JSX.Element {
   // Navigation handler
   const handleDimensionSelect = useCallback(
     (dimensionId: OrbitDimensionId, subDimensionId?: TechnologySubDimensionId) => {
+      // For organizational assessments, dimensionId is actually the aspectId
+      if (organizationalSections) {
+        const index = navItems.findIndex(
+          (nav) => nav.isOrganizational && nav.aspectId === (dimensionId as string)
+        );
+        if (index >= 0) {
+          setCurrentNavIndex(index);
+        }
+        return;
+      }
+
       const index = navItems.findIndex(
         (nav) => nav.dimensionId === dimensionId && nav.subDimensionId === subDimensionId
       );
@@ -251,7 +344,7 @@ export default function HistoryView(): JSX.Element {
         setCurrentNavIndex(index);
       }
     },
-    [navItems]
+    [navItems, organizationalSections]
   );
 
   // Format date
@@ -333,17 +426,19 @@ export default function HistoryView(): JSX.Element {
           overallScore={historyEntry.overallScore}
           overallProgress={overallProgress}
           dimensions={sidebarDimensions}
-          currentDimensionId={currentNav.dimensionId}
+          currentDimensionId={currentNav.dimensionId ?? (currentNav.aspectId as OrbitDimensionId)}
           currentSubDimensionId={currentNav.subDimensionId}
+          currentAspectId={currentNav.aspectId}
           onDimensionSelect={handleDimensionSelect}
           onReviewSelect={() => {}}
           isReviewSelected={false}
           showFinalize={false}
+          isOrganizationalAssessment={organizationalSections !== null}
         />
 
         {/* Main Content Area */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {currentNav.isAggregate && historyEntry.aggregateData ? (
+          {currentNav.isAggregate && currentNav.dimensionId && historyEntry.aggregateData ? (
             <AggregateDimensionView
               dimensionId={currentNav.dimensionId}
               dimensionName={currentNav.name}
@@ -356,7 +451,9 @@ export default function HistoryView(): JSX.Element {
             />
           ) : (
             <DimensionPage
-              dimensionId={currentNav.dimensionId}
+              dimensionId={
+                currentNav.dimensionId ?? (currentNav.organizationalType as OrbitDimensionId)
+              }
               subDimensionId={currentNav.subDimensionId}
               dimensionName={currentNav.name}
               dimensionDescription={currentNav.description}

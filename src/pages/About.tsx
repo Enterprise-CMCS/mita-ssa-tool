@@ -34,7 +34,14 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import BugReportOutlinedIcon from '@mui/icons-material/BugReportOutlined';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { GITHUB_REPO_URL } from '../constants';
+import TableViewIcon from '@mui/icons-material/TableView';
+import {
+  GITHUB_REPO_URL,
+  WORKBOOK_APPROX_SIZE,
+  WORKBOOK_DOWNLOAD_URL,
+  WORKBOOK_FILE_TYPE,
+  WORKBOOK_FILENAME,
+} from '../constants';
 import { SCORE_COLORS } from '../utils/colors';
 
 /** Core differentiators shown as a compact strip near the top. */
@@ -47,7 +54,7 @@ const VALUE_PROPS = [
   {
     icon: CloudOffIcon,
     title: 'Works offline',
-    body: 'Full functionality after the first load, even without a connection.',
+    body: 'Open it once with a connection, then keep working without one.',
   },
   {
     icon: CodeIcon,
@@ -138,7 +145,7 @@ const WORKFLOW = [
   {
     number: 1,
     title: 'Choose a capability',
-    body: 'Start on the Dashboard and pick any of the 66 capability areas. Add tags, like fiscal year or project, to stay organized.',
+    body: 'Start on the Dashboard and pick any of the 72 capability areas. Add tags, like fiscal year or project, to stay organized.',
   },
   {
     number: 2,
@@ -172,7 +179,12 @@ function EngagementItem({
     <Stack direction="row" spacing={1.5} alignItems="flex-start">
       {icon}
       <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+        {/* Card title under the "Get involved" <h2>. */}
+        <Typography
+          variant="subtitle2"
+          component="h3"
+          sx={{ fontWeight: 700, color: 'text.primary' }}
+        >
           {title}
           {href && (
             <ArrowForwardIcon
@@ -242,7 +254,10 @@ export default function About(): JSX.Element {
               <Stack direction="row" spacing={1.5} alignItems="flex-start">
                 <Icon color="primary" aria-hidden="true" sx={{ mt: 0.25 }} />
                 <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  {/* Decorative card titles ("Private by design" etc.), not
+                      document structure. Promoting them to <h2> would put three
+                      blurbs in the outline ahead of the page's real sections. */}
+                  <Typography variant="subtitle2" component="p" sx={{ fontWeight: 700 }}>
                     {prop.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -295,7 +310,7 @@ export default function About(): JSX.Element {
                 {dim.letter}
               </Avatar>
               <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
                   {dim.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -314,9 +329,9 @@ export default function About(): JSX.Element {
         </Stack>
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2.5 }}>
-          Business Architecture, Information, and Technology are assessed for each of the 66
-          capability areas. Outcomes and Roles are assessed once for your whole organization,
-          alongside a separate Enterprise Architecture assessment.
+          Business Architecture, Information, and Technology are assessed for each of the 72
+          capability areas. Outcomes, Roles, and Enterprise Architecture are assessed once for your
+          whole organization in the combined Enterprise Governance assessment.
         </Typography>
       </Paper>
 
@@ -362,7 +377,7 @@ export default function About(): JSX.Element {
                   >
                     {level.level}
                   </Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 700 }}>
                     {level.name}
                   </Typography>
                 </Stack>
@@ -415,6 +430,32 @@ export default function About(): JSX.Element {
           ))}
         </Grid>
 
+        {/*
+         * Offline behaviour, described where someone would look for it — inside "How to use the
+         * tool", after the three workflow steps.
+         *
+         * `VALUE_PROPS` near the top of this file says "works offline" in six words. This is the
+         * version that tells a state what to actually expect, including the update prompt, which is
+         * new behaviour a reviewer would otherwise meet with no explanation anywhere.
+         */}
+        <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Stack direction="row" spacing={1.5} alignItems="flex-start">
+            <CloudOffIcon color="primary" aria-hidden="true" sx={{ mt: 0.25 }} />
+            <Box>
+              <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 0.5 }}>
+                Working without a connection
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Once you have opened this tool with a connection, it will load and run without one —
+                including the offline Excel workbook. Your assessment is stored in your browser
+                either way, so nothing about saving depends on being online. When a new version is
+                released you will see a prompt offering to reload; until you accept it, you keep
+                using the version you have.
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+
         <Box sx={{ mt: 3 }}>
           <Button
             variant="contained"
@@ -446,6 +487,60 @@ export default function About(): JSX.Element {
         <Button variant="outlined" component={RouterLink} to="/import-export">
           Open Import / Export
         </Button>
+      </Paper>
+
+      {/* --- Offline workbook ------------------------------------------------ */}
+      {/*
+       * Between "your data stays with you" and "get involved", so the reading order is: how to use
+       * the tool, what happens to your data, what to do if you cannot use the tool at all, how to
+       * contribute. The **Landing hero** carries the primary link — an earlier revision of this
+       * comment said Import/Export did, which stopped being true when the link was repositioned
+       * after the 4.1.0 deploy. This one exists because the Guide is where someone goes to find out
+       * whether the tool fits their situation at all.
+       */}
+      <Paper sx={{ p: { xs: 3, md: 4 }, mb: 3 }} component="section" aria-labelledby="workbook-h">
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+          <TableViewIcon aria-hidden="true" color="primary" />
+          <Typography variant="h5" component="h2" id="workbook-h">
+            If you cannot use a browser tool
+          </Typography>
+        </Stack>
+        <Typography variant="body1" color="text.secondary" paragraph>
+          {/* "cannot describe different assessments" was removed from this sentence deliberately.
+              Both artifacts are generated from the same model files, but the workbook's scoring is a
+              second implementation in Excel formulas, and no test in this repo can evaluate a
+              formula — equivalence is checked by a manual, non-CI step, and has been wrong before.
+              So this claims shared rules, which is verifiable, rather than guaranteed agreement. */}
+          The same assessment is available as an Excel workbook. It covers every capability domain,
+          capability area and maturity aspect, and calculates scores with Excel formulas that mirror
+          the rules this tool uses. It needs no add-ins, macros or internet connection, and works in
+          Excel 2007 or later.
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          The workbook you download is blank. It is not an export of an assessment you have started
+          here, and completing it does not feed anything back into this tool — the two are separate
+          routes to the same result.
+        </Typography>
+        {/* Type and size via aria-describedby, not aria-label — see the note on Import/Export. An
+            aria-label here failed WCAG 2.5.3 because it did not contain the visible label. */}
+        <Button
+          variant="outlined"
+          href={WORKBOOK_DOWNLOAD_URL}
+          download={WORKBOOK_FILENAME}
+          startIcon={<TableViewIcon />}
+          aria-describedby="guide-workbook-meta"
+        >
+          Download the workbook
+        </Button>
+        <Typography
+          id="guide-workbook-meta"
+          variant="caption"
+          color="text.secondary"
+          component="p"
+          sx={{ mt: 1 }}
+        >
+          {WORKBOOK_FILE_TYPE} · {WORKBOOK_APPROX_SIZE}
+        </Typography>
       </Paper>
 
       {/* --- Get involved ------------------------------------------------ */}
@@ -487,7 +582,13 @@ export default function About(): JSX.Element {
             target="_blank"
             rel="noopener noreferrer"
             startIcon={<GitHubIcon />}
-            aria-label="View the project on GitHub (opens in new window)"
+            /*
+             * Must contain the visible label verbatim (WCAG 2.5.3 Label in Name). This previously
+             * read "View the project on GitHub (opens in new window)", which does not contain
+             * "View on GitHub" as a substring — the interposed words break it. Fixed here because
+             * the workbook links above were about to copy the same pattern.
+             */
+            aria-label="View on GitHub (opens in new window)"
           >
             View on GitHub
           </Button>

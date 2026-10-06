@@ -10,7 +10,6 @@ import type {
   AssessmentHistory,
   Tag,
   OrbitDimensionId,
-  OrganizationalAssessmentId,
 } from '../../types';
 
 /**
@@ -81,6 +80,14 @@ export interface ExportData {
   exportVersion: string;
   exportDate: string;
   appVersion: string;
+  /**
+   * Draft disclaimer, present only while the tool is built in draft mode
+   * (`VITE_DRAFT_MODE !== 'false'`). JSON and ZIP are the primary export path, so
+   * the marker has to reach them too — a state should not be able to circulate an
+   * export that looks final when the tool it came from is not (Decision 4).
+   * Absent, rather than empty, once the disclaimer is switched off.
+   */
+  draftNotice?: string;
   scope: ExportScope;
   scopeDetails?: {
     domainId?: string;
@@ -138,6 +145,12 @@ export interface MaturityProfileRow {
   notes: string;
   barriers: string;
   plans: string;
+  /**
+   * True for organizational section label rows (e.g., "Organizational
+   * Outcomes"). Label rows group the aspect rows that follow them and carry
+   * no rating data.
+   */
+  isSectionLabel?: boolean;
 }
 
 /**
@@ -147,10 +160,8 @@ export interface CapabilityAreaProfile {
   domainName: string;
   areaName: string;
   rows: MaturityProfileRow[];
-  /** True if this is an organizational assessment (Outcomes/Roles) */
+  /** True if this is the combined organizational assessment */
   isOrganizationalAssessment?: boolean;
-  /** The organizational assessment type if applicable */
-  organizationalType?: OrganizationalAssessmentId;
 }
 
 /**

@@ -26,7 +26,6 @@ interface CapabilityRowProps {
   onResume: () => void;
   onEdit: () => void;
   onView: () => void;
-  onExport: () => void;
   onDelete: () => void;
   onViewHistory: (historyId: string) => void;
   onDeleteHistory: (historyId: string) => void;
@@ -46,7 +45,6 @@ export function CapabilityRow({
   onResume,
   onEdit,
   onView,
-  onExport,
   onDelete,
   onViewHistory,
   onDeleteHistory,
@@ -198,7 +196,6 @@ export function CapabilityRow({
               onResume={onResume}
               onEdit={onEdit}
               onView={onView}
-              onExport={onExport}
               onDelete={onDelete}
               onViewHistory={toggleHistory}
             />

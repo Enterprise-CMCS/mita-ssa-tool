@@ -1,8 +1,22 @@
 {
   "version": "4.0",
-  "lastUpdated": "2026-05-03",
-  "description": "The MITA 4.0 Capability Reference Model defines the capabilities that State Medicaid Agencies (SMAs) possess or seek to develop. Capabilities are organized into three layers: Strategic (enterprise strategy), Core (mission and outcomes), and Support (critical enablers). Each capability is assessed using the standardized ORBIT maturity criteria.",
+  "lastUpdated": "2026-07-30",
+  "description": "MITA 4.0 Capability Reference Model: 14 capability domains and 72 capability areas across Strategic, Core, and Support layers. Source: BA working group capability model (July 2026), slides 4-6.",
   "domains": [
+    {
+      "id": "enterprise-architecture-domain",
+      "name": "Enterprise Architecture",
+      "layer": "strategic",
+      "description": "The Enterprise Architecture domain assesses organizational maturity in enterprise-level planning, governance, and architectural frameworks across the Medicaid enterprise. These capabilities apply at the organizational level rather than to specific business functions.",
+      "areas": [
+        {
+          "id": "enterprise-governance",
+          "name": "Enterprise Governance",
+          "description": "[Placeholder — pending updated Capability Reference Model] Assess organizational maturity across Outcomes, Roles, and Enterprise Architecture. These aspects are assessed once for the whole organization rather than per capability area.",
+          "topics": []
+        }
+      ]
+    },
     {
       "id": "plan-policy-management",
       "name": "Plan and Policy Management",
@@ -32,91 +46,13 @@
             "Cost-Sharing Rules",
             "Policy Alignment"
           ]
-        }
-      ]
-    },
-    {
-      "id": "strategy-planning-management",
-      "name": "Strategy and Planning Management",
-      "layer": "strategic",
-      "description": "The Strategy and Planning Management domain covers strategic planning, agency roadmap development, and state plan administration.",
-      "areas": [
-        {
-          "id": "maintain-strategic-plan",
-          "name": "Maintain Strategic Plan",
-          "description": "Ensures that a state's Medicaid enterprise remains aligned with its long-term strategic vision while adapting to evolving needs and priorities. Allows for alignment of outcomes and measures at the enterprise level.",
-          "topics": [
-            "Enterprise Goals",
-            "Outcome Alignment",
-            "Roadmap Priorities",
-            "Governance Structure",
-            "Regulatory Changes"
-          ]
         },
         {
-          "id": "develop-agency-roadmap",
-          "name": "Develop Agency Roadmap",
-          "description": "The SMA's roadmap serves a critical function of monitoring and managing the agency's portfolio, projects, and initiatives against federal funding (APDs), architectural vision, goals, and outcomes.",
-          "topics": [
-            "Portfolio Scope",
-            "Funding Alignment",
-            "Architectural Vision",
-            "Milestone Planning",
-            "Performance Measures"
-          ]
+          "id": "program-administration",
+          "name": "Program Administration",
+          "description": "[Placeholder — pending updated Capability Reference Model] Administer the Medicaid program's operations, including program design, implementation, and operational oversight.",
+          "topics": []
         },
-        {
-          "id": "state-plan-administration",
-          "name": "State Plan Administration",
-          "description": "Administration of the state plan in alignment with MITA facilitates the desired relationship between the SMA's policy and strategic planning. This collaboration promotes the connection between policy and funding, architecture, and performance monitoring.",
-          "topics": [
-            "Policy Updates",
-            "Federal Compliance",
-            "Funding Linkage",
-            "Architecture Alignment",
-            "Performance Monitoring"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "business-relationship-management",
-      "name": "Business Relationship Management",
-      "layer": "core",
-      "description": "The Business Relationship Management domain covers managing and monitoring business relationships throughout their lifecycle.",
-      "areas": [
-        {
-          "id": "manage-business-relationship-lifecycle",
-          "name": "Manage Business Relationship Lifecycle",
-          "description": "Ability to define the exchange of information and Trading Partner Agreements (TPA) between the SMA and its partners, including collaboration among intrastate agencies, interstate agencies, and federal agencies. These agreements address functionality for interoperability, coordination of standards of interoperability, establishment of inter-agency Service Level Agreements (SLA), identification of the types of information exchanged, and security and privacy requirements. Has a common focus (e.g., data exchange standards and SLA) and is responsible for the business relationship data store.",
-          "topics": [
-            "Trading Partner Agreements",
-            "Data Exchange Standards",
-            "Interoperability Requirements",
-            "Security & Privacy",
-            "SLA Establishment"
-          ]
-        },
-        {
-          "id": "monitor-business-relationship",
-          "name": "Monitor Business Relationship",
-          "description": "Ability to collect, organize, modify, and report on information about relationships with business partners, including monitoring significant dates, SLAs, points of contact, and limitations or constraints.",
-          "topics": [
-            "Relationship Tracking",
-            "SLA Compliance",
-            "Key Dates",
-            "Contact Management",
-            "Constraint Monitoring"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "care-service-coordination",
-      "name": "Care and Service Coordination",
-      "layer": "core",
-      "description": "The Care and Service Coordination domain covers waiver management, long-term care, visit verification, case management, and prior authorization processes.",
-      "areas": [
         {
           "id": "waiver-management",
           "name": "Waiver Management",
@@ -128,6 +64,66 @@
             "Program Changes"
           ]
         },
+        {
+          "id": "plan-information-management",
+          "name": "Plan Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports plan and policy management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
+        }
+      ]
+    },
+    {
+      "id": "strategy-planning-management",
+      "name": "Strategy and Planning Management",
+      "layer": "strategic",
+      "description": "The Strategy and Planning Management domain covers strategic planning, agency roadmap development, and state plan administration.",
+      "areas": [
+        {
+          "id": "strategic-plan-maintenance",
+          "name": "Strategic Plan Maintenance",
+          "description": "Ensures that a state's Medicaid enterprise remains aligned with its long-term strategic vision while adapting to evolving needs and priorities. Allows for alignment of outcomes and measures at the enterprise level.",
+          "topics": [
+            "Enterprise Goals",
+            "Outcome Alignment",
+            "Roadmap Priorities",
+            "Governance Structure",
+            "Regulatory Changes"
+          ]
+        },
+        {
+          "id": "strategic-roadmap-management",
+          "name": "Strategic Roadmap Management",
+          "description": "The SMA's roadmap serves a critical function of monitoring and managing the agency's portfolio, projects, and initiatives against federal funding (APDs), architectural vision, goals, and outcomes.",
+          "topics": [
+            "Portfolio Scope",
+            "Funding Alignment",
+            "Architectural Vision",
+            "Milestone Planning",
+            "Performance Measures"
+          ]
+        },
+        {
+          "id": "strategy-oversight-and-accountability",
+          "name": "Strategy Oversight and Accountability",
+          "description": "[Placeholder — pending updated Capability Reference Model] Provide oversight and accountability for strategy execution, tracking progress against enterprise goals and priorities.",
+          "topics": []
+        },
+        {
+          "id": "strategy-information-management",
+          "name": "Strategy Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports strategy and planning management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
+        }
+      ]
+    },
+    {
+      "id": "care-service-coordination",
+      "name": "Care and Service Coordination",
+      "layer": "core",
+      "description": "The Care and Service Coordination domain covers waiver management, long-term care, visit verification, case management, and prior authorization processes.",
+      "areas": [
         {
           "id": "long-term-care-support",
           "name": "Long-Term Care Support Management",
@@ -182,6 +178,13 @@
             "Audit Readiness",
             "Interoperability"
           ]
+        },
+        {
+          "id": "care-information-management",
+          "name": "Care Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports care and service coordination capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
@@ -255,6 +258,13 @@
             "Performance Monitoring",
             "Transparency Reporting"
           ]
+        },
+        {
+          "id": "claim-and-encounter-information-management",
+          "name": "Claim and Encounter Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports claims and encounter management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
@@ -289,6 +299,12 @@
           ]
         },
         {
+          "id": "contractor-support-management",
+          "name": "Contractor Support Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Support contractors through inquiries, grievances, appeals, and related assistance.",
+          "topics": []
+        },
+        {
           "id": "contract-information-management",
           "name": "Contract Information Management",
           "description": "Maintain and manage comprehensive contract and contractor information to ensure effective oversight by the SMA. Includes capturing, organizing, and monitoring all contractual elements such as SLAs, performance outcomes, compliance requirements, and formal agreements.",
@@ -298,7 +314,8 @@
             "Requirements Register",
             "Agreement Versions",
             "Oversight Reporting"
-          ]
+          ],
+          "informationManagement": true
         }
       ]
     },
@@ -309,8 +326,19 @@
       "description": "The Financial Management domain encompasses accounts receivable, accounts payable, fiscal/budget management, fund management, third party liability, and financial information management.",
       "areas": [
         {
-          "id": "accounts-payable",
-          "name": "Accounts Payable",
+          "id": "accounts-receivable-management",
+          "name": "Accounts Receivable Management",
+          "description": "Enables an SMA's tracking, management, and reconciliation of incoming payments and obligations owed to the Medicaid program.",
+          "topics": [
+            "Receivable Tracking",
+            "Collections Policy",
+            "Reconciliation",
+            "Aging Analysis"
+          ]
+        },
+        {
+          "id": "accounts-payable-management",
+          "name": "Accounts Payable Management",
           "description": "Enables SMA management of financial transactions related to Medicaid payments, including auditing, processing, and reconciling payables.",
           "topics": [
             "Invoice Intake",
@@ -318,17 +346,6 @@
             "Reconciliation",
             "Compliance Checks",
             "Disbursement Controls"
-          ]
-        },
-        {
-          "id": "accounts-receivable",
-          "name": "Accounts Receivable",
-          "description": "Enables an SMA's tracking, management, and reconciliation of incoming payments and obligations owed to the Medicaid program.",
-          "topics": [
-            "Receivable Tracking",
-            "Collections Policy",
-            "Reconciliation",
-            "Aging Analysis"
           ]
         },
         {
@@ -376,7 +393,8 @@
             "Performance Dashboards",
             "Audit Trails",
             "Data Governance"
-          ]
+          ],
+          "informationManagement": true
         }
       ]
     },
@@ -387,8 +405,8 @@
       "description": "The Member Management domain covers member eligibility, enrollment, and support management processes.",
       "areas": [
         {
-          "id": "member-eligibility-management",
-          "name": "Member Eligibility Management",
+          "id": "member-eligibility",
+          "name": "Member Eligibility",
           "description": "Supports the submission and processing of applications for eligibility for new members, as well as ongoing eligibility-related activities.",
           "topics": [
             "Application Intake",
@@ -399,8 +417,8 @@
           ]
         },
         {
-          "id": "member-enrollment-management",
-          "name": "Member Enrollment Management",
+          "id": "member-enrollment",
+          "name": "Member Enrollment",
           "description": "Supports enrollment of eligible members and ongoing enrollment-related support functions. Includes assignment to an appropriate MCO or Fee-for-Service plan based on eligibility, member health needs, and other relevant factors.",
           "topics": ["Plan Assignment", "Enrollment Changes", "Communication Notices"]
         },
@@ -414,6 +432,13 @@
             "Information Access",
             "Satisfaction Metrics"
           ]
+        },
+        {
+          "id": "member-information-management",
+          "name": "Member Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports member management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
@@ -440,6 +465,13 @@
           "name": "Drug Monitoring Oversight",
           "description": "Enables routine, repeatable oversight of controlled substance monitoring with standard reporting and Drug Utilization Review (DUR) processes. Supports structured audits for compliance.",
           "topics": ["Compliance Audits", "Trend Analysis"]
+        },
+        {
+          "id": "pharmacy-information-management",
+          "name": "Pharmacy Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports pharmacy management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
@@ -462,16 +494,10 @@
           ]
         },
         {
-          "id": "provider-screening",
-          "name": "Provider Screening",
-          "description": "Ensures that all providers meet the eligibility, screening, and compliance requirements necessary to participate in the Medicaid program. Includes validating professional licenses, certifications, education, training, work history, and conducting required screenings such as federal and state exclusion lists, criminal background checks, and site visits to confirm legitimacy and compliance with Medicaid standards. Applies during initial enrollment and on an ongoing basis to protect program integrity, reduce fraud, and safeguard Medicaid client access to qualified providers.",
-          "topics": [
-            "License Checks",
-            "Exclusion Lists",
-            "Background Reviews",
-            "Site Visits",
-            "Ongoing Monitoring"
-          ]
+          "id": "provider-eligibility",
+          "name": "Provider Eligibility",
+          "description": "[Placeholder — pending updated Capability Reference Model] Determine and maintain provider eligibility to participate in the Medicaid program.",
+          "topics": []
         },
         {
           "id": "provider-monitoring",
@@ -490,6 +516,13 @@
             "Grievance / Appeal",
             "Feedback Analytics"
           ]
+        },
+        {
+          "id": "provider-information-management",
+          "name": "Provider Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports provider management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
@@ -521,6 +554,13 @@
             "Partner Performance",
             "Efficiency Trends"
           ]
+        },
+        {
+          "id": "compliance-information-management",
+          "name": "Compliance Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports compliance management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
@@ -543,18 +583,6 @@
           ]
         },
         {
-          "id": "communication-dissemination",
-          "name": "Communication Dissemination",
-          "description": "Ability to manage and distribute prepared communication content to the intended recipient(s) through various channels.",
-          "topics": [
-            "Distribution Channels",
-            "Audience Targeting",
-            "Timing Control",
-            "Delivery Tracking",
-            "Accessibility"
-          ]
-        },
-        {
           "id": "communication-intake",
           "name": "Communication Intake",
           "description": "Ability to receive communications from internal or external parties, ensure they are routed to the appropriate recipient(s), and satisfy any other handling requirements (e.g., privacy, confidentiality, storage/retention).",
@@ -564,6 +592,18 @@
             "Storage / Retention",
             "Response Workflow",
             "Escalation Rules"
+          ]
+        },
+        {
+          "id": "communication-dissemination",
+          "name": "Communication Dissemination",
+          "description": "Ability to manage and distribute prepared communication content to the intended recipient(s) through various channels.",
+          "topics": [
+            "Distribution Channels",
+            "Audience Targeting",
+            "Timing Control",
+            "Delivery Tracking",
+            "Accessibility"
           ]
         },
         {
@@ -577,311 +617,227 @@
             "Media Relations",
             "Transparency"
           ]
+        },
+        {
+          "id": "communication-information-management",
+          "name": "Communication Information Management",
+          "description": "[Placeholder — pending updated Capability Reference Model] Manage the information that supports communication management capabilities, including its capture, maintenance, quality, and use.",
+          "topics": [],
+          "informationManagement": true
         }
       ]
     },
     {
       "id": "data-management",
-      "name": "Enterprise Data Management",
+      "name": "Data Management",
       "layer": "support",
-      "description": "The Enterprise Data Management Capability Domain represents the SMA's ability to manage its data. The domain encompasses key data management capability areas organized into Foundational (oversight and structure) and Lifecycle (data through planning, design, use, enhancement, enablement, and maintenance) categories.",
-      "categories": [
+      "description": "The Data Management Capability Domain represents the SMA's ability to manage its data through planning, design, use, enhancement, enablement, and maintenance.",
+      "areas": [
         {
-          "id": "foundational",
-          "name": "Foundational",
-          "description": "Data management capability areas that all other data management capability areas depend on and are critical for successfully managing data. These foundational capabilities provide oversight and structure to ensure data is fit for use and accessible to the right people.",
-          "areas": [
-            {
-              "id": "data-governance",
-              "name": "Data Governance",
-              "description": "Provides the ability to establish policies, roles, and processes to ensure data is managed as a strategic asset aligned with organizational objectives. Provides accountability and decision rights over data.",
-              "topics": [
-                "Policies and Standards",
-                "Roles and Responsibilities (e.g., Data Steward and Data Owner)",
-                "Compliance and Risk Management"
-              ]
-            },
-            {
-              "id": "data-quality",
-              "name": "Data Quality",
-              "description": "Provides the ability to ensure that data is fit for use.",
-              "topics": [
-                "Accuracy",
-                "Completeness",
-                "Consistency",
-                "Timeliness",
-                "Validity",
-                "Data Profiling and Assessment",
-                "Data Cleansing and Enrichment",
-                "Quality Metrics and KPIs",
-                "Root Cause Analysis and Remediation"
-              ]
-            },
-            {
-              "id": "metadata-management",
-              "name": "Metadata Management",
-              "description": "Provides the ability to create, track, store, and maintain information about an SMA's data assets.",
-              "topics": [
-                "Metadata Creation",
-                "Metadata Integration",
-                "Metadata Distribution and Delivery",
-                "Metadata Repositories",
-                "Metadata Standards and Taxonomies"
-              ]
-            },
-            {
-              "id": "data-security-privacy",
-              "name": "Data Security & Privacy",
-              "description": "Provides the ability to protect data from unauthorized access and ensures compliance with privacy laws and regulations to maintain trust and safeguard sensitive information.",
-              "topics": [
-                "Access Controls and Encryption",
-                "Data Masking and Anonymization",
-                "Consent Management, CFR 42 Part 2",
-                "Regulatory Compliance (e.g., HIPAA and ARC-AMPE)"
-              ]
-            }
+          "id": "data-governance",
+          "name": "Data Governance",
+          "description": "Provides the ability to establish policies, roles, and processes to ensure data is managed as a strategic asset aligned with organizational objectives. Provides accountability and decision rights over data.",
+          "topics": [
+            "Policies and Standards",
+            "Roles and Responsibilities (e.g., Data Steward and Data Owner)",
+            "Compliance and Risk Management"
           ]
         },
         {
-          "id": "lifecycle",
-          "name": "Lifecycle",
-          "description": "Data management capability areas that support the management of data through one or more phases of its lifecycle. These capability areas support data through planning, design, use, enhancement, enablement, and maintenance.",
-          "areas": [
-            {
-              "id": "master-data-management",
-              "name": "Master Data Management",
-              "description": "Provides the ability to manage critical business entities' data (e.g., customers and products) to ensure a single, authoritative view across the enterprise for consistency.",
-              "topics": [
-                "Master Data Modeling",
-                "Data Consolidation and Synchronization",
-                "Hierarchy Management"
-              ]
-            },
-            {
-              "id": "reference-data-management",
-              "name": "Reference Data Management",
-              "description": "Provides the ability to manage shared, standardized data that is used to characterize or classify other data and to relate data to information internal and external to the SMA.",
-              "topics": ["Reference Data Classification", "Controlled Change Management"]
-            },
-            {
-              "id": "data-integration-interoperability",
-              "name": "Data Integration and Interoperability",
-              "description": "Provides the ability to seamlessly exchange data and consolidate it across diverse systems. Ensures data consistency and accessibility enterprise-wide and with trading partners.",
-              "topics": [
-                "Data Durability and Availability",
-                "ETL Processes and API Management",
-                "Data Federation and Virtualization",
-                "Data Standards and Protocols"
-              ]
-            },
-            {
-              "id": "data-storage-warehousing",
-              "name": "Data Storage and Warehousing",
-              "description": "Provides the ability to persistently store, retain, and manage data in a specific location that is accessible to authorized stakeholders.",
-              "topics": [
-                "ETL / ELT Governance and Security",
-                "Machine Learning Readiness Structure / Unstructured Storage",
-                "Database Technologies",
-                "Data Warehousing Architecture",
-                "Big Data Platforms",
-                "Storage Optimization and Archiving"
-              ]
-            },
-            {
-              "id": "data-architecture-modeling-design",
-              "name": "Data Architecture, Modeling, and Design",
-              "description": "Provides the ability to define data structures, models, and standards that support organizational data strategy and ensure data integrity and usability.",
-              "topics": [
-                "Conceptual, Logical and Physical Modeling",
-                "Data Standards and Naming Conventions",
-                "Architecture Frameworks",
-                "Metadata Integration"
-              ]
-            },
-            {
-              "id": "document-content-management",
-              "name": "Document and Content Management",
-              "description": "Provides the ability to capture, track, store, retain, and manage unstructured data such as documents and multimedia. Ensures efficient storage, retrieval, and compliance with retention policies.",
-              "topics": [
-                "E-content Capture and Digitization",
-                "Optical Character Recognition processing",
-                "Audit Support",
-                "Content Repositories",
-                "Version Control and Audit Trails",
-                "Records Retention Policies"
-              ]
-            },
-            {
-              "id": "business-intelligence-data-science",
-              "name": "Business Intelligence & Data Science",
-              "description": "Provides the ability to collect, prepare, analyze, visualize, and present data to help SMAs make informed business decisions. Includes the ability to apply analytical techniques and advanced algorithms to transform data into actionable insights supporting strategic decision-making.",
-              "topics": [
-                "Reporting and Dashboards",
-                "Data Mining and Predictive Analytics",
-                "Machine Learning Models",
-                "Data Visualization"
-              ]
-            }
+          "id": "data-storage-operations-warehousing",
+          "name": "Data Storage, Operations, and Warehousing",
+          "description": "Provides the ability to persistently store, retain, and manage data in a specific location that is accessible to authorized stakeholders.",
+          "topics": [
+            "ETL / ELT Governance and Security",
+            "Machine Learning Readiness Structure / Unstructured Storage",
+            "Database Technologies",
+            "Data Warehousing Architecture",
+            "Big Data Platforms",
+            "Storage Optimization and Archiving"
+          ]
+        },
+        {
+          "id": "data-architecture-modeling-design",
+          "name": "Data Architecture, Modeling, and Design",
+          "description": "Provides the ability to define data structures, models, and standards that support organizational data strategy and ensure data integrity and usability.",
+          "topics": [
+            "Conceptual, Logical and Physical Modeling",
+            "Data Standards and Naming Conventions",
+            "Architecture Frameworks",
+            "Metadata Integration"
+          ]
+        },
+        {
+          "id": "master-data-management",
+          "name": "Master Data Management",
+          "description": "Provides the ability to manage critical business entities' data (e.g., customers and products) to ensure a single, authoritative view across the enterprise for consistency.",
+          "topics": [
+            "Master Data Modeling",
+            "Data Consolidation and Synchronization",
+            "Hierarchy Management"
+          ]
+        },
+        {
+          "id": "reference-data-management",
+          "name": "Reference Data Management",
+          "description": "Provides the ability to manage shared, standardized data that is used to characterize or classify other data and to relate data to information internal and external to the SMA.",
+          "topics": ["Reference Data Classification", "Controlled Change Management"]
+        },
+        {
+          "id": "document-content-management",
+          "name": "Document and Content Management",
+          "description": "Provides the ability to capture, track, store, retain, and manage unstructured data such as documents and multimedia. Ensures efficient storage, retrieval, and compliance with retention policies.",
+          "topics": [
+            "E-content Capture and Digitization",
+            "Optical Character Recognition processing",
+            "Audit Support",
+            "Content Repositories",
+            "Version Control and Audit Trails",
+            "Records Retention Policies"
+          ]
+        },
+        {
+          "id": "data-integration-interoperability",
+          "name": "Data Integration and Interoperability",
+          "description": "Provides the ability to seamlessly exchange data and consolidate it across diverse systems. Ensures data consistency and accessibility enterprise-wide and with trading partners.",
+          "topics": [
+            "Data Durability and Availability",
+            "ETL Processes and API Management",
+            "Data Federation and Virtualization",
+            "Data Standards and Protocols"
+          ]
+        },
+        {
+          "id": "data-quality-management",
+          "name": "Data Quality Management",
+          "description": "Provides the ability to ensure that data is fit for use.",
+          "topics": [
+            "Accuracy",
+            "Completeness",
+            "Consistency",
+            "Timeliness",
+            "Validity",
+            "Data Profiling and Assessment",
+            "Data Cleansing and Enrichment",
+            "Quality Metrics and KPIs",
+            "Root Cause Analysis and Remediation"
+          ]
+        },
+        {
+          "id": "data-security-privacy",
+          "name": "Data Security & Privacy",
+          "description": "Provides the ability to protect data from unauthorized access and ensures compliance with privacy laws and regulations to maintain trust and safeguard sensitive information.",
+          "topics": [
+            "Access Controls and Encryption",
+            "Data Masking and Anonymization",
+            "Consent Management, CFR 42 Part 2",
+            "Regulatory Compliance (e.g., HIPAA and ARC-AMPE)"
+          ]
+        },
+        {
+          "id": "metadata-management",
+          "name": "Metadata Management",
+          "description": "Provides the ability to create, track, store, and maintain information about an SMA's data assets.",
+          "topics": [
+            "Metadata Creation",
+            "Metadata Integration",
+            "Metadata Distribution and Delivery",
+            "Metadata Repositories",
+            "Metadata Standards and Taxonomies"
           ]
         }
       ]
     },
     {
       "id": "technical",
-      "name": "Enterprise Technology",
+      "name": "Technology Management",
       "layer": "support",
-      "description": "The Enterprise Technology Capability Domain represents the SMA's technology capabilities that enable and support core and strategic capabilities. Organized into seven categories: Infrastructure, Integration, Platform Services, Application Architecture, Security and Identity, Operations and Maintenance, and Development and Release.",
-      "categories": [
+      "description": "The Technology Management Capability Domain represents the SMA's technology capabilities that enable and support core, strategic, and support capabilities. These areas align one-to-one with the Technology dimension of the ORBIT maturity model.",
+      "areas": [
         {
-          "id": "technology-infrastructure-management",
-          "name": "Technical Infrastructure Management",
-          "description": "",
-          "areas": [
-            {
-              "id": "compute-and-storage",
-              "name": "Compute and Storage",
-              "description": "Provides the State Medicaid Agency (SMA) with the ability to provision computing resources for the Medicaid Enterprise System (MES) and manage the storage of data and files, with backups and retention in accordance with regulatory compliance requirements.",
-              "topics": ["Servers", "Storage", "Backups", "Retention"]
-            },
-            {
-              "id": "networking-and-technical-recovery",
-              "name": "Networking and Technical Recovery",
-              "description": "Provides the SMA with the ability to establish secure connections between MES environments, and external systems and partners, monitor network traffic, and adjust the network through failover and recovery during peak usage or outages.",
-              "topics": ["Networking", "Communications", "Disaster Recovery", "Failover"]
-            },
-            {
-              "id": "identity-access-and-consent",
-              "name": "Identity, Access and Consent",
-              "description": "Provides the SMA with the ability to manage how someone logs in, what role and permissions they have, and how identity is verified within the MES, and gather members’ consent and sharing preferences.",
-              "topics": [
-                "Roles Based Access Control",
-                "Identity Proofing",
-                "Consent and Sharing Preferences"
-              ]
-            },
-            {
-              "id": "security-protection-and-monitoring",
-              "name": "Security Protection and Monitoring",
-              "description": "Provides the SMA with the ability to secure and protect sensitive and confidential Medicaid and healthcare information in the MES, prevent unauthorized access, detect unusual activity, log and remediate events, and support audits to comply with regulatory compliance requirements.",
-              "topics": [
-                "Encryption",
-                "Monitoring of Activities",
-                "Event Logging",
-                "Audit and Compliance"
-              ]
-            },
-            {
-              "id": "system-operations-and-monitoring",
-              "name": "System Operations and Monitoring",
-              "description": "Provides the SMA with the ability to analyze the MES health, performance, and availability, and perform steady-state operational processes to maintain and support the MES and its environments.",
-              "topics": ["Monitoring of Performance", "Availability", "MES maintenance"]
-            },
-            {
-              "id": "development-testing-release-and-security-compliance",
-              "name": "Development, Testing, Release and Security Compliance",
-              "description": "Provides the SMA with the ability to create, update, and version source code and scripts, test changes, resolve defects, and promote through pre-production and production MES environments with security checks incorporated.",
-              "topics": [
-                "Source Code and Script",
-                "Version Control",
-                "Bugs and Defects",
-                "Deployment and Security Checks"
-              ]
-            }
+          "id": "compute-and-storage",
+          "name": "Compute and Storage",
+          "description": "Provides the State Medicaid Agency (SMA) with the ability to provision computing resources for the Medicaid Enterprise System (MES) and manage the storage of data and files, with backups and retention in accordance with regulatory compliance requirements.",
+          "topics": ["Servers", "Storage", "Backups", "Retention"]
+        },
+        {
+          "id": "networking-and-technical-recovery",
+          "name": "Networking and Technical Recovery",
+          "description": "Provides the SMA with the ability to establish secure connections between MES environments, and external systems and partners, monitor network traffic, and adjust the network through failover and recovery during peak usage or outages.",
+          "topics": ["Networking", "Communications", "Disaster Recovery", "Failover"]
+        },
+        {
+          "id": "identity-access-and-consent",
+          "name": "Identity, Access and Consent",
+          "description": "Provides the SMA with the ability to manage how someone logs in, what role and permissions they have, and how identity is verified within the MES, and gather members’ consent and sharing preferences.",
+          "topics": [
+            "Roles Based Access Control",
+            "Identity Proofing",
+            "Consent and Sharing Preferences"
           ]
         },
         {
-          "id": "application-management",
-          "name": "Application Management",
-          "description": "",
-          "areas": [
-            {
-              "id": "api-messaging-and-integration",
-              "name": "API, Messaging, and Integration",
-              "description": "Provides the ability for the SMA to facilitate integration and connectivity between MES applications through scheduled or real-time events and establishes connections with the Centers for Medicare and Medicaid Services (CMS), Managed Care Organizations (MCOs), providers, and other Medicaid partners or external systems.",
-              "topics": [
-                "APIs and Interfaces",
-                "Alerts and Events",
-                "Common Formats (FHIR, X12, REST)",
-                "Secure connections with CMS, MCOs, and Providers"
-              ]
-            },
-            {
-              "id": "application-hosting-and-platform-services",
-              "name": "Application Hosting and Platform Services",
-              "description": "Provides the ability for the SMA to host Medicaid applications in managed environments within the MES, and leverage and reuse common services to avoid duplication and redundancy.",
-              "topics": ["Hosting Environments", "Shared Resources"]
-            },
-            {
-              "id": "business-rules-and-workflows",
-              "name": "Business Rules and Workflows",
-              "description": "Provides the ability for the SMA to automate Medicaid business processes and document and share business rules human readable and system formats to support transactions.",
-              "topics": ["Workflows", "Business Rules"]
-            },
-            {
-              "id": "modular-architecture",
-              "name": "Modular Architecture",
-              "description": "Provides the ability for the SMA to decompose Medicaid applications into smaller, manageable components that are easier to modify, update, or replace, without impacting the entire Medicaid application or MES.",
-              "topics": ["Modularity", "Scalability", "Ease of Replacement"]
-            },
-            {
-              "id": "user-interfaces-and-session-management",
-              "name": "User Interfaces and Session Management",
-              "description": "Provides the ability for the SMA to design Medicaid applications that are easy for internal and external users to interact with and perform activities, and work across different devices and browsers, and accessibility tools, including maintaining user activity within the Medicaid application so users can continue or complete their activities.",
-              "topics": ["User-Friendly Design", "Accessibility", "Continuity of User Activities"]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "enterprise-architecture-domain",
-      "name": "Enterprise Architecture",
-      "layer": "support",
-      "description": "The Enterprise Architecture domain assesses organizational maturity in enterprise-level planning, governance, and architectural frameworks across the Medicaid enterprise. These capabilities apply at the organizational level rather than to specific business functions.",
-      "areas": [
-        {
-          "id": "organizational-enterprise-architecture",
-          "name": "Organizational Enterprise Architecture",
-          "description": "Assesses the organization's maturity in defining business capabilities, integrating enterprise architecture, managing policies, and aligning strategic planning across the Medicaid enterprise.",
+          "id": "security-protection-and-monitoring",
+          "name": "Security Protection and Monitoring",
+          "description": "Provides the SMA with the ability to secure and protect sensitive and confidential Medicaid and healthcare information in the MES, prevent unauthorized access, detect unusual activity, log and remediate events, and support audits to comply with regulatory compliance requirements.",
           "topics": [
-            "Business Capability Management",
-            "Enterprise Architecture Frameworks",
-            "Policy Management & Compliance",
-            "Strategic Planning & Governance"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "enterprise-governance",
-      "name": "Enterprise Governance",
-      "layer": "support",
-      "description": "The Enterprise Governance domain assesses organizational maturity in defining outcomes and managing roles across the Medicaid enterprise. These capabilities apply at the organizational level rather than to specific business functions.",
-      "areas": [
-        {
-          "id": "organizational-outcomes",
-          "name": "Organizational Outcomes",
-          "description": "Assesses the organization's maturity in defining, tracking, and achieving desired outcomes across the Medicaid enterprise. Covers culture, capability, quality, alignment, metrics, and reusability of outcome practices.",
-          "topics": [
-            "Culture & Mindset",
-            "Outcome Development Capability",
-            "Quality & Consistency",
-            "Goal Alignment",
-            "Metrics & Measurement",
-            "Reusability & Integration"
+            "Encryption",
+            "Monitoring of Activities",
+            "Event Logging",
+            "Audit and Compliance"
           ]
         },
         {
-          "id": "organizational-roles",
-          "name": "Organizational Roles",
-          "description": "Assesses the organization's maturity in managing roles, resources, governance, and capacity across the Medicaid enterprise. Covers goal alignment, governance, communication, leadership, and staffing.",
+          "id": "system-operations-and-monitoring",
+          "name": "System Operations and Monitoring",
+          "description": "Provides the SMA with the ability to analyze the MES health, performance, and availability, and perform steady-state operational processes to maintain and support the MES and its environments.",
+          "topics": ["Monitoring of Performance", "Availability", "MES maintenance"]
+        },
+        {
+          "id": "development-testing-release-and-security-compliance",
+          "name": "Development, Testing, Release and Security Compliance",
+          "description": "Provides the SMA with the ability to create, update, and version source code and scripts, test changes, resolve defects, and promote through pre-production and production MES environments with security checks incorporated.",
           "topics": [
-            "Organizational Goals Alignment",
-            "Governance & Standardization",
-            "Communication",
-            "Culture & Leadership",
-            "Resourcing Capacity"
+            "Source Code and Script",
+            "Version Control",
+            "Bugs and Defects",
+            "Deployment and Security Checks"
           ]
+        },
+        {
+          "id": "api-messaging-and-integration",
+          "name": "API, Messaging, and Integration",
+          "description": "Provides the ability for the SMA to facilitate integration and connectivity between MES applications through scheduled or real-time events and establishes connections with the Centers for Medicare and Medicaid Services (CMS), Managed Care Organizations (MCOs), providers, and other Medicaid partners or external systems.",
+          "topics": [
+            "APIs and Interfaces",
+            "Alerts and Events",
+            "Common Formats (FHIR, X12, REST)",
+            "Secure connections with CMS, MCOs, and Providers"
+          ]
+        },
+        {
+          "id": "application-hosting-and-platform-services",
+          "name": "Application Hosting and Platform Services",
+          "description": "Provides the ability for the SMA to host Medicaid applications in managed environments within the MES, and leverage and reuse common services to avoid duplication and redundancy.",
+          "topics": ["Hosting Environments", "Shared Resources"]
+        },
+        {
+          "id": "business-rules-and-workflows",
+          "name": "Business Rules and Workflows",
+          "description": "Provides the ability for the SMA to automate Medicaid business processes and document and share business rules human readable and system formats to support transactions.",
+          "topics": ["Workflows", "Business Rules"]
+        },
+        {
+          "id": "modular-architecture",
+          "name": "Modular Architecture",
+          "description": "Provides the ability for the SMA to decompose Medicaid applications into smaller, manageable components that are easier to modify, update, or replace, without impacting the entire Medicaid application or MES.",
+          "topics": ["Modularity", "Scalability", "Ease of Replacement"]
+        },
+        {
+          "id": "user-interfaces-and-session-management",
+          "name": "User Interfaces and Session Management",
+          "description": "Provides the ability for the SMA to design Medicaid applications that are easy for internal and external users to interact with and perform activities, and work across different devices and browsers, and accessibility tools, including maintaining user activity within the Medicaid application so users can continue or complete their activities.",
+          "topics": ["User-Friendly Design", "Accessibility", "Continuity of User Activities"]
         }
       ]
     }

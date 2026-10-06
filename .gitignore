@@ -52,3 +52,12 @@ dev-dist/
 
 # Test data
 test-data/
+
+# Generated XLSX workbook (build output of scripts/generate-xlsx-workbook.mjs)
+public/mita-4.0-self-assessment-workbook.xlsx
+
+# Sub-agent review output (local only)
+semantic-review/
+
+# Playwright MCP output: screenshots, console logs, accessibility snapshots
+.playwright-mcp/

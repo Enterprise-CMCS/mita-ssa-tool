@@ -5,12 +5,13 @@
  * Shows both As-Is (current) and To-Be (target) maturity levels.
  */
 
-import { JSX, useState, useMemo, Fragment, useRef, useEffect } from 'react';
+import { JSX, useState, useMemo, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
   List,
+  ListItem,
   ListItemButton,
   ListItemText,
   Collapse,
@@ -32,10 +33,12 @@ import type {
   DimensionScore,
   CapabilityArea,
   CapabilityLayer,
+  RatingDimensionId,
 } from '../../types';
-import { getAreasFromDomain, isCategorizedDomain } from '../../types';
+
 import { getAreaWithDomain } from '../../services/capabilities';
 import { isEnterpriseDomain, getAggregatedDimensionForDomain } from '../../services/orbit';
+import { calculateDimensionScore, type RatingForScoring } from '../../services/scoring';
 import { isOrganizationalAssessmentArea as isOrgArea } from '../../constants';
 import { DimensionScoresTableWithTarget } from './DimensionScoresTableWithTarget';
 import {
@@ -84,20 +87,28 @@ const SHORT_DIMENSION_LABELS: Record<string, string> = {
 };
 
 /**
- * Calculate target (To-Be) dimension scores from ratings
+ * Calculate target (To-Be) dimension scores from ratings.
+ *
+ * Delegates to `calculateDimensionScore`, the canonical scorer, so the To-Be column
+ * follows the same rules as As-Is. It previously flat-averaged `targetLevel` across
+ * every rating in the dimension, which gave Technology a mean over all 11 aspects
+ * rather than the mean of its two sub-dimension means — the same weighting error
+ * OBS-25 describes for export, in the live UI and for To-Be instead of As-Is.
+ *
+ * Only Technology changes. Every other dimension, and each organizational section,
+ * takes the canonical scorer's plain-mean path, which is what this function already
+ * computed for them.
  */
 function calculateTargetDimensionScores(
   dimensionScores: DimensionScore[],
-  ratings: { dimensionId: string; targetLevel?: number }[]
-): { dimensionId: string; targetLevel: number | null }[] {
+  ratings: (RatingForScoring & { dimensionId: RatingDimensionId })[]
+): { dimensionId: RatingDimensionId; targetLevel: number | null }[] {
   return dimensionScores.map((dim) => {
-    const dimRatings = ratings.filter(
-      (r) => r.dimensionId === dim.dimensionId && r.targetLevel && r.targetLevel > 0
-    );
-    if (dimRatings.length === 0) return { dimensionId: dim.dimensionId, targetLevel: null };
-
-    const avg = dimRatings.reduce((sum, r) => sum + (r.targetLevel ?? 0), 0) / dimRatings.length;
-    return { dimensionId: dim.dimensionId, targetLevel: Math.round(avg * 10) / 10 };
+    const dimRatings = ratings.filter((r) => r.dimensionId === dim.dimensionId);
+    return {
+      dimensionId: dim.dimensionId,
+      targetLevel: calculateDimensionScore(dim.dimensionId, dimRatings, 'targetLevel'),
+    };
   });
 }
 
@@ -116,7 +127,7 @@ function DomainDetailPanel({
   const { getDomainScore, getCapabilityScore, getCapabilityStatus } = useScores();
 
   const domainScore = getDomainScore(domain.id);
-  const allAreas = getAreasFromDomain(domain);
+  const allAreas = domain.areas;
   const finalizedAreas = allAreas.filter((area) => getCapabilityStatus(area.id) === 'finalized');
 
   return (
@@ -163,7 +174,8 @@ function DomainDetailPanel({
               sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}
             >
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h3" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                {/* A score value, not a section heading. */}
+                <Typography variant="h3" component="p" sx={{ fontWeight: 700, lineHeight: 1 }}>
                   {domainScore.toFixed(1)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -535,7 +547,8 @@ function AreaDetailPanel({
               {/* Scores row */}
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                  {/* Score values and the arrow between them are data, not headings. */}
+                  <Typography variant="h4" component="p" sx={{ fontWeight: 700, lineHeight: 1 }}>
                     {scoreData.score?.toFixed(1) ?? '—'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -544,12 +557,19 @@ function AreaDetailPanel({
                 </Box>
                 {toBeAverage !== null && (
                   <>
-                    <Typography variant="h5" color="text.disabled" sx={{ mx: 0.5 }}>
+                    <Typography
+                      variant="h5"
+                      component="p"
+                      color="text.disabled"
+                      sx={{ mx: 0.5 }}
+                      aria-hidden="true"
+                    >
                       →
                     </Typography>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography
                         variant="h4"
+                        component="p"
                         sx={{ fontWeight: 700, lineHeight: 1, color: 'success.main' }}
                       >
                         {toBeAverage.toFixed(1)}
@@ -564,12 +584,12 @@ function AreaDetailPanel({
 
               {/* Radar Chart */}
               {radarChartData && (
-                <Box
-                  sx={{ width: 200, height: 200 }}
-                  role="img"
-                  aria-label="Radar chart comparing As-Is and To-Be maturity levels across ORBIT dimensions"
-                >
-                  <Radar data={radarChartData} options={radarChartOptions} />
+                <Box sx={{ width: 200, height: 200 }}>
+                  <Radar
+                    data={radarChartData}
+                    options={radarChartOptions}
+                    aria-label="Radar chart comparing As-Is and To-Be maturity levels across ORBIT dimensions"
+                  />
                 </Box>
               )}
             </Box>
@@ -584,7 +604,8 @@ function AreaDetailPanel({
             sx={{ fontSize: 48, color: 'action.disabled', mb: 1 }}
             aria-hidden="true"
           />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          {/* Empty-state text, not a heading. */}
+          <Typography variant="h6" component="p" color="text.secondary" gutterBottom>
             No Assessment Results
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -667,18 +688,25 @@ function NavigationPanel({
   return (
     <Box>
       <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="subtitle2" fontWeight={600}>
+        {/* Nav panel heading, nested under the page's "Results by Domain" <h2>. */}
+        <Typography variant="subtitle2" component="h3" fontWeight={600}>
           Domains & Areas
         </Typography>
       </Box>
-      <List disablePadding dense role="list">
+      {/* A three-level expandable tree (layer > domain > area). `Collapse` renders
+          a div, so it must be nested INSIDE each <li> rather than placed beside
+          it: a <ul> may only contain <li>, and an <li> may contain flow content.
+          Each level therefore gets its own <ul>. `display: block` on the <li> is
+          required so the button and its Collapse stack instead of sitting side by
+          side under ListItem's default flex. */}
+      <List disablePadding dense>
         {LAYER_ORDER.map((layer) => {
           const layerDomains = domainsByLayer.get(layer) ?? [];
           const isLayerExpanded = expandedLayers.has(layer);
           const layerConfig = LAYER_DISPLAY[layer];
 
           return (
-            <Fragment key={layer}>
+            <ListItem key={layer} disablePadding sx={{ display: 'block' }}>
               {/* Layer Header */}
               <ListItemButton
                 onClick={() => toggleLayer(layer)}
@@ -725,142 +753,85 @@ function NavigationPanel({
 
               {/* Domains in this layer */}
               <Collapse in={isLayerExpanded} timeout="auto" unmountOnExit>
-                {layerDomains.map((domain) => {
-                  const isExpanded = expandedDomains.has(domain.id);
-                  const isDomainSelected = selectedDomainId === domain.id;
-                  const domainScore = getDomainScore(domain.id);
-                  const allAreas = getAreasFromDomain(domain);
-                  const finalizedAreas = allAreas.filter(
-                    (area) => getCapabilityStatus(area.id) === 'finalized'
-                  );
+                <List disablePadding dense>
+                  {layerDomains.map((domain) => {
+                    const isExpanded = expandedDomains.has(domain.id);
+                    const isDomainSelected = selectedDomainId === domain.id;
+                    const domainScore = getDomainScore(domain.id);
+                    const allAreas = domain.areas;
+                    const finalizedAreas = allAreas.filter(
+                      (area) => getCapabilityStatus(area.id) === 'finalized'
+                    );
 
-                  return (
-                    <Fragment key={domain.id}>
-                      <ListItemButton
-                        selected={isDomainSelected}
-                        onClick={() => {
-                          onSelectDomain(domain);
-                          // Toggle expand/collapse
-                          setExpandedDomains((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(domain.id)) {
-                              next.delete(domain.id);
-                            } else {
-                              next.add(domain.id);
+                    return (
+                      <ListItem key={domain.id} disablePadding sx={{ display: 'block' }}>
+                        <ListItemButton
+                          selected={isDomainSelected}
+                          onClick={() => {
+                            onSelectDomain(domain);
+                            // Toggle expand/collapse
+                            setExpandedDomains((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(domain.id)) {
+                                next.delete(domain.id);
+                              } else {
+                                next.add(domain.id);
+                              }
+                              return next;
+                            });
+                          }}
+                          sx={{ py: 0.5, minHeight: 36 }}
+                          aria-expanded={isExpanded}
+                          aria-label={`${domain.name}, ${domainScore !== null ? `score ${domainScore.toFixed(1)}, ` : ''}${finalizedAreas.length} of ${allAreas.length} assessed`}
+                        >
+                          {isExpanded ? (
+                            <ExpandMoreIcon
+                              sx={{ fontSize: 18, mr: 0.5, color: 'action.active' }}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <ChevronRightIcon
+                              sx={{ fontSize: 18, mr: 0.5, color: 'action.active' }}
+                              aria-hidden="true"
+                            />
+                          )}
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" fontWeight={500} noWrap>
+                                {domain.name}
+                              </Typography>
                             }
-                            return next;
-                          });
-                        }}
-                        sx={{ py: 0.5, minHeight: 36 }}
-                        aria-expanded={isExpanded}
-                        aria-label={`${domain.name}, ${domainScore !== null ? `score ${domainScore.toFixed(1)}, ` : ''}${finalizedAreas.length} of ${allAreas.length} assessed`}
-                      >
-                        {isExpanded ? (
-                          <ExpandMoreIcon
-                            sx={{ fontSize: 18, mr: 0.5, color: 'action.active' }}
-                            aria-hidden="true"
+                            sx={{ my: 0 }}
                           />
-                        ) : (
-                          <ChevronRightIcon
-                            sx={{ fontSize: 18, mr: 0.5, color: 'action.active' }}
-                            aria-hidden="true"
-                          />
-                        )}
-                        <ListItemText
-                          primary={
-                            <Typography variant="body2" fontWeight={500} noWrap>
-                              {domain.name}
+                          {domainScore !== null ? (
+                            <Chip
+                              label={`${domainScore.toFixed(1)} (${finalizedAreas.length}/${allAreas.length})`}
+                              size="small"
+                              sx={{
+                                bgcolor: 'primary.main',
+                                color: 'white',
+                                fontWeight: 600,
+                                height: 20,
+                                fontSize: '0.7rem',
+                                ml: 0.5,
+                              }}
+                            />
+                          ) : (
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                              {finalizedAreas.length}/{allAreas.length}
                             </Typography>
-                          }
-                          sx={{ my: 0 }}
-                        />
-                        {domainScore !== null ? (
-                          <Chip
-                            label={`${domainScore.toFixed(1)} (${finalizedAreas.length}/${allAreas.length})`}
-                            size="small"
-                            sx={{
-                              bgcolor: 'primary.main',
-                              color: 'white',
-                              fontWeight: 600,
-                              height: 20,
-                              fontSize: '0.7rem',
-                              ml: 0.5,
-                            }}
-                          />
-                        ) : (
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                            {finalizedAreas.length}/{allAreas.length}
-                          </Typography>
-                        )}
-                      </ListItemButton>
+                          )}
+                        </ListItemButton>
 
-                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                        <List disablePadding dense>
-                          {isCategorizedDomain(domain)
-                            ? domain.categories.map((category) => (
-                                <Fragment key={category.id}>
-                                  <Box sx={{ px: 2, py: 0.25, bgcolor: 'grey.100' }}>
-                                    <Typography
-                                      variant="caption"
-                                      fontWeight={600}
-                                      color="text.secondary"
-                                      sx={{ fontSize: '0.65rem' }}
-                                    >
-                                      {category.name}
-                                    </Typography>
-                                  </Box>
-                                  {category.areas.map((area) => {
-                                    const areaScore = getCapabilityScore(area.id);
-                                    const isSelected = selectedAreaId === area.id;
-                                    const isFinalized =
-                                      getCapabilityStatus(area.id) === 'finalized';
-                                    return (
-                                      <ListItemButton
-                                        key={area.id}
-                                        selected={isSelected}
-                                        onClick={() => onSelectArea(area.id, area.name)}
-                                        sx={{
-                                          pl: 4,
-                                          py: 0.25,
-                                          minHeight: 28,
-                                          opacity: isFinalized ? 1 : 0.7,
-                                        }}
-                                      >
-                                        <ListItemText
-                                          primary={
-                                            <Typography
-                                              variant="body2"
-                                              sx={{
-                                                fontSize: '0.8rem',
-                                                fontStyle: isFinalized ? 'normal' : 'italic',
-                                              }}
-                                            >
-                                              {area.name}
-                                            </Typography>
-                                          }
-                                          sx={{ my: 0 }}
-                                        />
-                                        {areaScore !== null ? (
-                                          <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                            {areaScore.toFixed(1)}
-                                          </Typography>
-                                        ) : (
-                                          <Typography variant="caption" color="text.disabled">
-                                            —
-                                          </Typography>
-                                        )}
-                                      </ListItemButton>
-                                    );
-                                  })}
-                                </Fragment>
-                              ))
-                            : allAreas.map((area) => {
-                                const areaScore = getCapabilityScore(area.id);
-                                const isSelected = selectedAreaId === area.id;
-                                const isFinalized = getCapabilityStatus(area.id) === 'finalized';
-                                return (
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                          <List disablePadding dense>
+                            {allAreas.map((area) => {
+                              const areaScore = getCapabilityScore(area.id);
+                              const isSelected = selectedAreaId === area.id;
+                              const isFinalized = getCapabilityStatus(area.id) === 'finalized';
+                              return (
+                                <ListItem key={area.id} disablePadding>
                                   <ListItemButton
-                                    key={area.id}
                                     selected={isSelected}
                                     onClick={() => onSelectArea(area.id, area.name)}
                                     sx={{
@@ -894,15 +865,17 @@ function NavigationPanel({
                                       </Typography>
                                     )}
                                   </ListItemButton>
-                                );
-                              })}
-                        </List>
-                      </Collapse>
-                    </Fragment>
-                  );
-                })}
+                                </ListItem>
+                              );
+                            })}
+                          </List>
+                        </Collapse>
+                      </ListItem>
+                    );
+                  })}
+                </List>
               </Collapse>
-            </Fragment>
+            </ListItem>
           );
         })}
       </List>

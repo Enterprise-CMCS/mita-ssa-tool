@@ -15,71 +15,30 @@
 export type CapabilityLayer = 'strategic' | 'core' | 'support';
 
 /**
- * A capability area within a domain or category
+ * A capability area within a domain
  */
 export interface CapabilityArea {
   id: string;
   name: string;
   description: string;
   topics: string[];
+  /**
+   * True for "<X> Information Management" areas. Drives the assessment-page
+   * disclaimer about assessing information maturity once per domain.
+   */
+  informationManagement?: boolean;
 }
 
 /**
- * A category within a domain (used by Data Management and Technical domains)
+ * A capability domain with its areas.
+ * The MITA 4.0 metamodel is strictly two levels: Domain -> Area.
  */
-export interface CapabilityCategory {
-  id: string;
-  name: string;
-  description: string;
-  areas: CapabilityArea[];
-}
-
-/**
- * A standard capability domain with direct areas
- */
-export interface StandardCapabilityDomain {
+export interface CapabilityDomain {
   id: string;
   name: string;
   layer: CapabilityLayer;
   description: string;
   areas: CapabilityArea[];
-  categories?: never;
-}
-
-/**
- * A categorized capability domain (Data Management, Technical)
- */
-export interface CategorizedCapabilityDomain {
-  id: string;
-  name: string;
-  layer: CapabilityLayer;
-  description: string;
-  categories: CapabilityCategory[];
-  areas?: never;
-}
-
-/**
- * A capability domain - either standard (with areas) or categorized (with categories)
- */
-export type CapabilityDomain = StandardCapabilityDomain | CategorizedCapabilityDomain;
-
-/**
- * Type guard to check if a domain has categories
- */
-export function isCategorizedDomain(
-  domain: CapabilityDomain
-): domain is CategorizedCapabilityDomain {
-  return 'categories' in domain && Array.isArray(domain.categories);
-}
-
-/**
- * Get all areas from a domain (handles both standard and categorized)
- */
-export function getAreasFromDomain(domain: CapabilityDomain): CapabilityArea[] {
-  if (isCategorizedDomain(domain)) {
-    return domain.categories.flatMap((c) => c.areas);
-  }
-  return domain.areas;
 }
 
 /**
@@ -209,7 +168,8 @@ export interface TechnologyDimension {
 
 /**
  * Organizational assessment definition (from orbit-model.json)
- * Used for Outcomes and Roles which are assessed at the organizational level
+ * Used for the organizational sections, which are assessed once for the whole
+ * organization rather than per capability area
  */
 export interface OrganizationalAssessmentDefinition {
   id: OrganizationalAssessmentId;
@@ -301,7 +261,8 @@ export interface EvidenceResponse {
 /**
  * ORBIT Rating - one per aspect per capability assessment
  * For standard assessments: dimensionId is OrbitDimensionId (B, I, T)
- * For organizational assessments: dimensionId is OrganizationalAssessmentId ('outcomes' | 'roles')
+ * For organizational assessments: dimensionId is an OrganizationalAssessmentId
+ * ('outcomes' | 'roles' | 'enterprise-architecture')
  */
 export interface OrbitRating {
   id: string;

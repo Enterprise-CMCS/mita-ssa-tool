@@ -11,7 +11,7 @@ import { getTotalAreaCount, getAreasByDomainId, getAreaWithDomain } from '../ser
 import { calculateAverageScore, calculateDimensionScore } from '../services/scoring';
 import {
   getAllDimensionIds,
-  getTotalAspectCount,
+  getAssessableAspectCountForArea,
   getTechnologySubDimensions,
   getAspectsForDimension,
   getAspectsForSubDimension,
@@ -19,7 +19,7 @@ import {
   getOrganizationalAspects,
   getOrganizationalAssessment,
 } from '../services/orbit';
-import { getOrganizationalAssessmentType } from '../constants';
+import { getOrganizationalSections } from '../constants';
 import type { OrbitRating, OrbitDimensionId, DimensionScore, SubDimensionScore } from '../types';
 
 /**
@@ -107,13 +107,19 @@ export function useScores(): UseScoresReturn {
 
     // Build score data for each capability area
     const scoresByArea = new Map<string, CapabilityScoreData>();
-    const totalAspects = getTotalAspectCount();
 
     for (const assessment of assessments) {
       const assessmentRatings = ratingsByAssessment.get(assessment.id) ?? [];
       const assessedCount = assessmentRatings.filter(
         (r) => r.currentLevel > 0 || r.currentLevel === -1
       ).length;
+
+      // Per-area denominator: 26 standard, 15 organizational, and standard
+      // minus the aggregated dimension for enterprise-domain areas
+      const totalAspects = getAssessableAspectCountForArea(
+        assessment.capabilityAreaId,
+        assessment.capabilityDomainId
+      );
 
       scoresByArea.set(assessment.capabilityAreaId, {
         capabilityAreaId: assessment.capabilityAreaId,
@@ -123,7 +129,8 @@ export function useScores(): UseScoresReturn {
         assessmentDate: assessment.finalizedAt ?? assessment.updatedAt,
         tags: assessment.tags,
         status: assessment.status,
-        completionPercentage: Math.round((assessedCount / totalAspects) * 100),
+        completionPercentage:
+          totalAspects > 0 ? Math.round((assessedCount / totalAspects) * 100) : 0,
       });
     }
 
@@ -305,8 +312,28 @@ export function useScores(): UseScoresReturn {
 
   /**
    * Get dimension scores for an assessment.
-   * For Technology dimension, calculates sub-dimension averages first,
-   * then averages those for the overall Technology score.
+   *
+   * Dimension roll-ups delegate to `calculateDimensionScore`, which is the
+   * canonical scorer: `finalizeAssessment` builds `overallScore` from it, and
+   * the aggregate calculations use it too. For Technology it averages the two
+   * sub-dimension means at full precision.
+   *
+   * The per-sub-dimension `averageLevel` values are rounded for display and must
+   * not be fed back into the dimension roll-up. Rounding twice made this function
+   * disagree with the canonical scorer by 0.1 — Infrastructure 2,2,2,2,1,1 plus
+   * Application 1,1,1,1,1 reported 1.4 here against 1.3 from finalize. Display
+   * rounds; scoring does not.
+   *
+   * Aspect scores are built from the ORBIT model rather than from ratings, so
+   * unassessed aspects appear at level 0 and ratings orphaned by a model change
+   * are excluded from both the listing and the score. `finalizeAssessment` feeds
+   * raw ratings instead, so the two can still differ if orphaned ratings exist.
+   *
+   * PDF and CSV export now delegate to the same canonical scorer — not to this
+   * function — so the Technology weighting agrees everywhere it is reported
+   * (OBS-25, fixed in Wave 5). The model-versus-ratings caveat in the paragraph
+   * above still applies: orphaned ratings can still make this function and the
+   * export paths differ, because they are fed different inputs.
    */
   const getDimensionScoresForAssessment = (assessmentId: string): DimensionScore[] | undefined => {
     if (!data) return undefined;
@@ -369,15 +396,27 @@ export function useScores(): UseScoresReturn {
           };
         });
 
-        // Technology dimension score = average of sub-dimension scores
-        const validSubScores = subDimensionScores
-          .map((s) => s.averageLevel)
-          .filter((v): v is number => v !== null);
-        avgLevel = calculateAverageScore(validSubScores);
+        // Delegate to the canonical scorer, feeding it the model-matched aspect
+        // levels tagged with their sub-dimension. It averages the sub-dimension
+        // means at full precision, unlike the rounded values displayed above.
+        avgLevel = calculateDimensionScore(
+          dimId,
+          subDimensionScores.flatMap((sub) =>
+            sub.aspectScores
+              .filter((a) => a.currentLevel > 0)
+              .map((a) => ({
+                currentLevel: a.currentLevel,
+                subDimensionId: sub.subDimensionId,
+              }))
+          )
+        );
       } else {
-        // For non-Technology dimensions: simple average of aspect scores
-        const assessed = aspectScores.filter((a) => a.currentLevel > 0);
-        avgLevel = calculateAverageScore(assessed.map((a) => a.currentLevel));
+        avgLevel = calculateDimensionScore(
+          dimId,
+          aspectScores
+            .filter((a) => a.currentLevel > 0)
+            .map((a) => ({ currentLevel: a.currentLevel }))
+        );
       }
 
       return {
@@ -393,7 +432,7 @@ export function useScores(): UseScoresReturn {
 
   /**
    * Calculate aggregate score for a dimension across all qualifying finalized assessments.
-   * Used for enterprise domains (Enterprise Data Management, Enterprise Technology).
+   * Used for enterprise domains (Data Management, Technology Management).
    * Excludes enterprise domains from the calculation to prevent circular dependencies.
    *
    * @param dimensionId - The dimension to aggregate (e.g., 'information' or 'technology')
@@ -450,8 +489,9 @@ export function useScores(): UseScoresReturn {
   };
 
   /**
-   * Get dimension scores for an organizational assessment (Outcomes or Roles).
-   * Returns a single "dimension" representing the organizational assessment type.
+   * Get section scores for the combined organizational assessment.
+   * Returns one "dimension" score per section (Outcomes, Roles,
+   * Enterprise Architecture), in display order.
    */
   const getOrganizationalScoresForAssessment = (
     assessmentId: string,
@@ -462,44 +502,43 @@ export function useScores(): UseScoresReturn {
     const ratings = data.ratingsByAssessment.get(assessmentId);
     if (!ratings) return undefined;
 
-    // Get the organizational assessment type for this area
-    const orgType = getOrganizationalAssessmentType(areaId);
-    if (!orgType) return undefined;
+    // Get the organizational assessment sections for this area
+    const sections = getOrganizationalSections(areaId);
+    if (!sections) return undefined;
 
-    // Get the organizational assessment definition
-    const orgAssessment = getOrganizationalAssessment(orgType);
-    const orgAspects = getOrganizationalAspects(orgType);
+    return sections.map((section) => {
+      const orgAssessment = getOrganizationalAssessment(section);
+      const orgAspects = getOrganizationalAspects(section);
 
-    // Filter ratings to only those for this organizational assessment type
-    const orgRatings = ratings.filter((r) => r.dimensionId === orgType);
+      // Filter ratings to only those for this section
+      const sectionRatings = ratings.filter((r) => r.dimensionId === section);
 
-    // Build aspect scores
-    const aspectScores = orgAspects.map((aspect) => {
-      const rating = orgRatings.find((r) => r.aspectId === aspect.id);
+      // Build aspect scores
+      const aspectScores = orgAspects.map((aspect) => {
+        const rating = sectionRatings.find((r) => r.aspectId === aspect.id);
+        return {
+          aspectId: aspect.id,
+          aspectName: aspect.name,
+          dimensionId: section,
+          subDimensionId: undefined,
+          currentLevel: rating?.currentLevel ?? 0,
+          isAssessed: rating ? rating.currentLevel !== 0 : false,
+        };
+      });
+
+      // Calculate section average
+      const assessed = aspectScores.filter((a) => a.currentLevel > 0);
+      const avgLevel = calculateAverageScore(assessed.map((a) => a.currentLevel));
+
       return {
-        aspectId: aspect.id,
-        aspectName: aspect.name,
-        dimensionId: orgType as OrbitDimensionId, // Cast for compatibility
-        subDimensionId: undefined,
-        currentLevel: rating?.currentLevel ?? 0,
-        isAssessed: rating ? rating.currentLevel !== 0 : false,
-      };
-    });
-
-    // Calculate average
-    const assessed = aspectScores.filter((a) => a.currentLevel > 0);
-    const avgLevel = calculateAverageScore(assessed.map((a) => a.currentLevel));
-
-    return [
-      {
-        dimensionId: orgType as OrbitDimensionId, // Cast for compatibility
+        dimensionId: section,
         dimensionName: orgAssessment.name,
         required: true,
         averageLevel: avgLevel,
         aspectScores,
         subDimensionScores: undefined,
-      },
-    ];
+      };
+    });
   };
 
   return {

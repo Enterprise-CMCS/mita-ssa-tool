@@ -1,4 +1,4 @@
-import { JSX, ReactNode } from 'react';
+import { JSX, ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppBar, Box, Button, Container, Link, Toolbar, Typography } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -6,6 +6,9 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { ScrollToTop } from './ScrollToTop';
+import { DraftBanner } from './DraftBanner';
+import { PwaUpdatePrompt } from './PwaUpdatePrompt';
+import { DRAFT_TITLE_MARKER, IS_DRAFT } from '../../constants';
 
 interface LayoutProps {
   children: ReactNode;
@@ -24,6 +27,28 @@ function isNavActive(currentPath: string, navPath: string): boolean {
 export default function Layout({ children }: LayoutProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // The skip link jumps to #main-content, which sits below the top banner, so anyone
+  // using it never encounters the notice. Marking the title covers that, since it
+  // is announced on load regardless.
+  //
+  // Uses the short `DRAFT_TITLE_MARKER`, not the banner label: the label is now
+  // "Predecisional Pilot Materials", which would swamp the title.
+  //
+  // The guard keys on the parenthesised marker rather than the bare word, so a
+  // title that merely contains the word in prose still gets marked. It also omits
+  // any leading whitespace on purpose: the DOM trims `document.title`, so a guard
+  // written as `' (Predecisional)'` never matches once the value has round-tripped,
+  // and the marker gets appended again on every mount.
+  //
+  // Layout wraps <Routes> and so never unmounts, making this a genuine once-only
+  // effect; the guard also absorbs StrictMode's double invocation.
+  useEffect(() => {
+    const marker = `(${DRAFT_TITLE_MARKER})`;
+    if (IS_DRAFT && !document.title.endsWith(marker)) {
+      document.title = document.title ? `${document.title} ${marker}` : marker;
+    }
+  }, []);
 
   // Hide footer on assessment pages (full-screen working area)
   const isAssessmentPage = location.pathname.startsWith('/assessment/');
@@ -97,7 +122,14 @@ export default function Layout({ children }: LayoutProps): JSX.Element {
                 aria-current={isActive ? 'page' : undefined}
                 sx={{
                   mr: item.path !== '/guide' ? 1 : 0,
-                  backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  /**
+                   * The selected state must DARKEN the AppBar, not lighten it.
+                   * `rgba(255,255,255,0.1)` raised `primary.main` to `#1a7fc3`,
+                   * dropping white text to 4.31:1 — so the *current* page was
+                   * the only nav item failing AA, on five pages. Darkening to
+                   * `#005f9e` gives 6.71:1 and still reads as selected.
+                   */
+                  backgroundColor: isActive ? 'rgba(0,0,0,0.16)' : 'transparent',
                 }}
               >
                 {item.label}
@@ -106,6 +138,8 @@ export default function Layout({ children }: LayoutProps): JSX.Element {
           })}
         </Toolbar>
       </AppBar>
+
+      {IS_DRAFT && <DraftBanner variant="top" />}
 
       <Box
         component="main"
@@ -125,6 +159,33 @@ export default function Layout({ children }: LayoutProps): JSX.Element {
       >
         {children}
       </Box>
+
+      {/*
+       * Registers the service worker and shows a prompt when a new build is waiting.
+       *
+       * Outside <main> for the same reason the bottom notice below is, and in normal flow rather
+       * than floating: as a fixed-position toast it overlapped the CMS notice and the footer, and
+       * those are a hard requirement (Decision 15). As a flexShrink:0 sibling it cannot cover
+       * anything — <main> shrinks to accommodate it.
+       *
+       * Renders an empty, zero-height live region when there is no update, so it costs no layout.
+       */}
+      <PwaUpdatePrompt />
+
+      {/*
+       * Bottom notice, above the footer and outside <main> on purpose.
+       *
+       * Outside <main> because on non-assessment pages <main> scrolls, so a notice
+       * inside it would scroll out of view on any long page — and the assessment page
+       * sets overflow:hidden and manages its own scrolling, where a notice inside
+       * <main> would be unreachable entirely. As a flexShrink:0 sibling it is visible
+       * on every page, which is the point of CMS asking for it.
+       *
+       * Above the footer so the reading order is notice-then-site-chrome, and so it is
+       * still the bottommost content on the assessment page, where the footer is
+       * suppressed.
+       */}
+      {IS_DRAFT && <DraftBanner variant="bottom" />}
 
       {!isAssessmentPage && (
         <Box

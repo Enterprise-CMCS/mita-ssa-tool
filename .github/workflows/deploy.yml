@@ -30,9 +30,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        # 22.18 is the floor, not a preference — see the note in ci.yml. Wave 8 adds the
+        # workbook generator to `npm run build`, which this workflow runs, so the deploy
+        # environment has to be able to execute a TypeScript file directly. Bumped in
+        # this wave rather than in Wave 8 so that CI and deploy never disagree about the
+        # runtime they validate against.
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.18'
           cache: 'npm'
 
       - name: Install dependencies
@@ -44,13 +49,57 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # `prebuild` generates the offline workbook into `public/`, which Vite then copies into
+      # `dist/`. The file is gitignored, so it does not exist in a fresh checkout and this is
+      # the only thing that puts it in the deployed site.
       - name: Build
         env:
           # Dynamically set base path from repo name
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
           # Dynamically set GitHub repo URL
           VITE_GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          #
+          # ---------------------------------------------------------------------------------
+          # GO-LIVE SWITCH (Decision 13)
+          #
+          # To remove the predecisional pilot notices everywhere, in one change, delete the
+          # "# " from the start of the next line. It is already at the correct indentation —
+          # the same column as VITE_BASE_PATH above — so no re-alignment is needed. (Getting
+          # that wrong yields a workflow file GitHub refuses to run, which is a bad thing to
+          # discover on go-live day.)
+          #
+          # VITE_DRAFT_MODE: 'false'
+          #
+          # It is a single variable because every surface derives from it rather than carrying
+          # its own copy of the wording. Setting it removes:
+          #
+          #   - the top and bottom banners on every page (`Layout.tsx`)
+          #   - the "(Predecisional)" suffix on the document title and the static
+          #     <title>/<meta description> that render as the link preview in Teams and Slack
+          #   - the notice row in CSV maturity profiles, the JSON envelope's `draftNotice`,
+          #     and the ZIP manifest's
+          #   - the PDF cover band and the per-page PDF footer line
+          #   - the workbook's A1 notice on every sheet, its print footer, its document
+          #     properties, and the `00_README` notice section
+          #
+          # Two things to know before flipping it:
+          #
+          # 1. The default is notices ON. Only the literal string 'false' switches them off, so
+          #    a typo, an empty value or a forgotten variable all fail toward showing the
+          #    notice, which is the safe direction.
+          # 2. Only the app reads `import.meta.env`; the workbook generator reads
+          #    `process.env`. Both are set by this one `env:` block because `prebuild` runs in
+          #    the same step, so the app and the workbook cannot disagree.
+          #
+          # `workbook.test.ts` has a suite that runs the whole generator with the flag flipped,
+          # so the off path is covered by tests. Generate one and open it before go-live
+          # regardless — no human has yet looked at a notice-free workbook.
+          # ---------------------------------------------------------------------------------
         run: npm run build
+
+      # Fail the deploy rather than publish a site whose workbook download links 404.
+      - name: Verify the shipped workbook
+        run: npm run verify:workbook-artifact
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -205,12 +205,15 @@ export default function Results(): JSX.Element {
             ))}
           </Box>
         </Box>
-        <Box
-          sx={{ height: 500 }}
-          role="img"
-          aria-label="Horizontal bar chart showing maturity scores for each domain grouped by layer"
-        >
-          <Bar data={chartData} options={chartOptions} />
+        {/* react-chartjs-2 puts role="img" on the <canvas> and spreads unknown
+            props onto it, so the accessible name belongs here. Labelling only a
+            wrapper left the canvas itself an unnamed image (axe role-img-alt). */}
+        <Box sx={{ height: 500 }}>
+          <Bar
+            data={chartData}
+            options={chartOptions}
+            aria-label="Horizontal bar chart showing maturity scores for each domain grouped by layer"
+          />
         </Box>
       </Paper>
 

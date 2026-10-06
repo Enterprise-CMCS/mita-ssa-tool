@@ -10,3 +10,4 @@ export { AssessmentContextBar } from './AssessmentContextBar';
 export { AssessmentSidebar } from './AssessmentSidebar';
 export { DimensionPage } from './DimensionPage';
 export { AggregateDimensionView } from './AggregateDimensionView';
+export { InformationManagementNotice } from './InformationManagementNotice';

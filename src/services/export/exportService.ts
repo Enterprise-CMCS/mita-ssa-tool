@@ -11,14 +11,19 @@ import JSZip from 'jszip';
 
 import { db } from '../db';
 import { getDomainById, getAreaById } from '../capabilities';
-import { calculateAverageScore, calculateDimensionScore } from '../scoring';
+import { calculateDimensionScore } from '../scoring';
 import {
   isEnterpriseDomain,
   getAggregatedDimensionForDomain,
   getOrganizationalAspects,
+  getOrganizationalAssessment,
 } from '../orbit';
-import { getOrganizationalAssessmentType } from '../../constants';
-import { getAreasFromDomain } from '../../types';
+import {
+  getOrganizationalSections,
+  isOrganizationalDimensionId,
+  IS_DRAFT,
+  DRAFT_NOTICE_LINE,
+} from '../../constants';
 import type {
   ExportOptions,
   ExportData,
@@ -131,7 +136,7 @@ async function collectExportData(options: ExportOptions): Promise<ExportData> {
     // All areas in a domain
     const domain = getDomainById(domainId);
     if (domain) {
-      const areas = getAreasFromDomain(domain);
+      const areas = domain.areas;
       const areaIds = areas.map((a) => a.id);
 
       assessments = await db.capabilityAssessments
@@ -187,6 +192,7 @@ async function collectExportData(options: ExportOptions): Promise<ExportData> {
     exportVersion: EXPORT_VERSION,
     exportDate: new Date().toISOString(),
     appVersion: APP_VERSION,
+    ...(IS_DRAFT ? { draftNotice: DRAFT_NOTICE_LINE } : {}),
     scope,
     scopeDetails,
     data: {
@@ -383,6 +389,7 @@ export async function exportAsZip(
     exportVersion: EXPORT_VERSION,
     exportDate: exportData.exportDate,
     appVersion: APP_VERSION,
+    ...(IS_DRAFT ? { draftNotice: DRAFT_NOTICE_LINE } : {}),
     scope: options.scope,
     contents: {
       dataJson: true,
@@ -450,7 +457,7 @@ async function generateDomainMaturityProfile(
   const domain = getDomainById(domainId);
   if (!domain) return null;
 
-  const areas = getAreasFromDomain(domain);
+  const areas = domain.areas;
   const areaIds = areas.map((a) => a.id);
 
   // Get all finalized assessments for this domain
@@ -540,11 +547,11 @@ function generateCapabilityAreaProfile(
   aggregateData?: { dimensionId: OrbitDimensionId; score: number | null; contributingCount: number }
 ): CapabilityAreaProfile {
   // Check if this is an organizational assessment
-  const orgType = getOrganizationalAssessmentType(assessment.capabilityAreaId);
+  const sections = getOrganizationalSections(assessment.capabilityAreaId);
 
-  if (orgType) {
+  if (sections) {
     // Organizational assessment - generate aspect-based profile
-    return generateOrganizationalAreaProfile(assessment, ratings, orgType);
+    return generateOrganizationalAreaProfile(assessment, ratings, sections);
   }
 
   // Standard assessment - generate dimension-based profile
@@ -552,32 +559,48 @@ function generateCapabilityAreaProfile(
 }
 
 /**
- * Generates a profile for an organizational assessment (Outcomes/Roles).
- * Shows aspects directly instead of dimensions.
+ * Generates a profile for the combined organizational assessment.
+ * Shows aspects directly instead of dimensions, iterating all sections
+ * (Outcomes, Roles, Enterprise Architecture) in display order.
  */
 function generateOrganizationalAreaProfile(
   assessment: CapabilityAssessment,
   ratings: OrbitRating[],
-  orgType: OrganizationalAssessmentId
+  sections: OrganizationalAssessmentId[]
 ): CapabilityAreaProfile {
-  const aspects = getOrganizationalAspects(orgType);
   const rows: MaturityProfileRow[] = [];
 
-  for (const aspect of aspects) {
-    // Find the rating for this aspect
-    const rating = ratings.find((r) => r.dimensionId === orgType && r.aspectId === aspect.id);
+  for (const section of sections) {
+    const aspects = getOrganizationalAspects(section);
 
-    const asIs = rating && rating.currentLevel > 0 ? rating.currentLevel.toString() : '';
-    const toBe = rating?.targetLevel && rating.targetLevel > 0 ? rating.targetLevel.toString() : '';
-
+    // Section label row grouping the aspects that follow
     rows.push({
-      dimension: aspect.name, // Using 'dimension' field for aspect name in CSV
-      asIs,
-      toBe,
-      notes: rating?.notes ?? '',
-      barriers: rating?.barriers ?? '',
-      plans: rating?.plans ?? '',
+      dimension: getOrganizationalAssessment(section).name,
+      asIs: '',
+      toBe: '',
+      notes: '',
+      barriers: '',
+      plans: '',
+      isSectionLabel: true,
     });
+
+    for (const aspect of aspects) {
+      // Find the rating for this aspect
+      const rating = ratings.find((r) => r.dimensionId === section && r.aspectId === aspect.id);
+
+      const asIs = rating && rating.currentLevel > 0 ? rating.currentLevel.toString() : '';
+      const toBe =
+        rating?.targetLevel && rating.targetLevel > 0 ? rating.targetLevel.toString() : '';
+
+      rows.push({
+        dimension: aspect.name, // Using 'dimension' field for aspect name in CSV
+        asIs,
+        toBe,
+        notes: rating?.notes ?? '',
+        barriers: rating?.barriers ?? '',
+        plans: rating?.plans ?? '',
+      });
+    }
   }
 
   return {
@@ -585,7 +608,6 @@ function generateOrganizationalAreaProfile(
     areaName: assessment.capabilityAreaName,
     rows,
     isOrganizationalAssessment: true,
-    organizationalType: orgType,
   };
 }
 
@@ -605,12 +627,18 @@ function generateStandardAreaProfile(
     technology: 'Technology',
   };
 
-  // Group ratings by dimension and calculate averages
+  /**
+   * Ratings are kept whole rather than flattened into level arrays, because
+   * `subDimensionId` is what makes the Technology roll-up correct and flattening
+   * throws it away. That flattening was OBS-25: a flat mean over all 11 Technology
+   * aspects weights the 6-aspect Infrastructure sub-dimension more heavily than the
+   * 5-aspect Application one, printing 3.2 in the CSV a state submits to CMS where
+   * the tool's own UI shows 3.0.
+   */
   const dimensionData: Record<
     string,
     {
-      asIs: number[];
-      toBe: number[];
+      ratings: OrbitRating[];
       notes: string[];
       barriers: string[];
       plans: string[];
@@ -618,10 +646,9 @@ function generateStandardAreaProfile(
   > = {};
 
   // Initialize all dimensions
-  for (const dimName of Object.values(dimensionMap)) {
-    dimensionData[dimName] = {
-      asIs: [],
-      toBe: [],
+  for (const dimId of Object.keys(dimensionMap)) {
+    dimensionData[dimId] = {
+      ratings: [],
       notes: [],
       barriers: [],
       plans: [],
@@ -631,27 +658,14 @@ function generateStandardAreaProfile(
   // Aggregate data from ratings (only B-I-T dimensions)
   for (const rating of ratings) {
     // Skip organizational assessment ratings in standard assessments
-    if (
-      rating.dimensionId === 'outcomes' ||
-      rating.dimensionId === 'roles' ||
-      rating.dimensionId === 'enterprise-architecture'
-    ) {
+    if (isOrganizationalDimensionId(rating.dimensionId)) {
       continue;
     }
 
-    const dimName = dimensionMap[rating.dimensionId as OrbitDimensionId];
-    if (!dimName) continue;
-
-    const dimData = dimensionData[dimName];
+    const dimData = dimensionData[rating.dimensionId];
     if (!dimData) continue;
 
-    // Collect scores (only positive values)
-    if (rating.currentLevel > 0) {
-      dimData.asIs.push(rating.currentLevel);
-    }
-    if (rating.targetLevel && rating.targetLevel > 0) {
-      dimData.toBe.push(rating.targetLevel);
-    }
+    dimData.ratings.push(rating);
 
     // Collect text fields (non-empty only)
     if (rating.notes && rating.notes.trim()) {
@@ -669,7 +683,7 @@ function generateStandardAreaProfile(
   const rows: MaturityProfileRow[] = [];
 
   for (const [dimId, dimName] of Object.entries(dimensionMap)) {
-    const dimData = dimensionData[dimName];
+    const dimData = dimensionData[dimId];
     if (!dimData) continue;
 
     // Check if this is an aggregate dimension for this assessment
@@ -683,11 +697,14 @@ function generateStandardAreaProfile(
       // Use aggregate score for enterprise domains
       asIsAvg = aggregateData.score !== null ? aggregateData.score.toFixed(1) : '';
       toBeAvg = ''; // Aggregate doesn't have target level
-      notes = `(Aggregate from ${aggregateData.contributingCount} assessments)`;
+      const plural = aggregateData.contributingCount === 1 ? '' : 's';
+      notes = `(Aggregate from ${aggregateData.contributingCount} assessment${plural})`;
     } else {
-      // Calculate averages using shared scoring utility
-      const asIsScore = calculateAverageScore(dimData.asIs);
-      const toBeScore = calculateAverageScore(dimData.toBe);
+      // Delegate to the canonical scorer so this artifact cannot disagree with the
+      // tool's own UI. To-Be uses the same rule via `levelField`.
+      const dimensionId = dimId as OrbitDimensionId;
+      const asIsScore = calculateDimensionScore(dimensionId, dimData.ratings);
+      const toBeScore = calculateDimensionScore(dimensionId, dimData.ratings, 'targetLevel');
       asIsAvg = asIsScore !== null ? asIsScore.toFixed(1) : '';
       toBeAvg = toBeScore !== null ? toBeScore.toFixed(1) : '';
       notes = dimData.notes.join('; ');

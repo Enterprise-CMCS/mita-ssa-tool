@@ -11,10 +11,8 @@ import type {
   CapabilityReferenceModel,
   CapabilityDomain,
   CapabilityArea,
-  CapabilityCategory,
   CapabilityLayer,
 } from '../types';
-import { getAreasFromDomain, isCategorizedDomain } from '../types';
 
 // Type assertion for imported JSON
 const capabilities = capabilitiesData as CapabilityReferenceModel;
@@ -68,7 +66,7 @@ export function getDomainByName(name: string): CapabilityDomain | undefined {
  * @returns Flat array of all capability areas
  */
 export function getAllAreas(): CapabilityArea[] {
-  return capabilities.domains.flatMap((d) => getAreasFromDomain(d));
+  return capabilities.domains.flatMap((d) => d.areas);
 }
 
 /**
@@ -78,19 +76,7 @@ export function getAllAreas(): CapabilityArea[] {
  */
 export function getAreasByDomainId(domainId: string): CapabilityArea[] {
   const domain = getDomainById(domainId);
-  if (!domain) return [];
-  return getAreasFromDomain(domain);
-}
-
-/**
- * Get categories for a categorized domain
- * @param domainId - The domain ID
- * @returns Array of categories, or empty array if not a categorized domain
- */
-export function getCategoriesByDomainId(domainId: string): CapabilityCategory[] {
-  const domain = getDomainById(domainId);
-  if (!domain || !isCategorizedDomain(domain)) return [];
-  return domain.categories;
+  return domain?.areas ?? [];
 }
 
 /**
@@ -100,8 +86,7 @@ export function getCategoriesByDomainId(domainId: string): CapabilityCategory[] 
  */
 export function getAreaById(areaId: string): CapabilityArea | undefined {
   for (const domain of capabilities.domains) {
-    const areas = getAreasFromDomain(domain);
-    const area = areas.find((a) => a.id === areaId);
+    const area = domain.areas.find((a) => a.id === areaId);
     if (area) return area;
   }
   return undefined;
@@ -110,28 +95,18 @@ export function getAreaById(areaId: string): CapabilityArea | undefined {
 /**
  * Get a capability area with its parent domain info
  * @param areaId - The area ID to find
- * @returns Object with area, domain, and optionally category, or undefined if not found
+ * @returns Object with area and domain, or undefined if not found
  */
 export function getAreaWithDomain(areaId: string):
   | {
       area: CapabilityArea;
       domain: CapabilityDomain;
-      category?: CapabilityCategory;
     }
   | undefined {
   for (const domain of capabilities.domains) {
-    if (isCategorizedDomain(domain)) {
-      for (const category of domain.categories) {
-        const area = category.areas.find((a) => a.id === areaId);
-        if (area) {
-          return { area, domain, category };
-        }
-      }
-    } else {
-      const area = domain.areas.find((a) => a.id === areaId);
-      if (area) {
-        return { area, domain };
-      }
+    const area = domain.areas.find((a) => a.id === areaId);
+    if (area) {
+      return { area, domain };
     }
   }
   return undefined;
@@ -143,13 +118,7 @@ export function getAreaWithDomain(areaId: string):
  * @returns The parent domain if found, undefined otherwise
  */
 export function getDomainForArea(areaId: string): CapabilityDomain | undefined {
-  for (const domain of capabilities.domains) {
-    const areas = getAreasFromDomain(domain);
-    if (areas.some((a) => a.id === areaId)) {
-      return domain;
-    }
-  }
-  return undefined;
+  return capabilities.domains.find((d) => d.areas.some((a) => a.id === areaId));
 }
 
 /**
@@ -157,7 +126,7 @@ export function getDomainForArea(areaId: string): CapabilityDomain | undefined {
  * @returns Total number of capability areas across all domains
  */
 export function getTotalAreaCount(): number {
-  return capabilities.domains.reduce((sum, d) => sum + getAreasFromDomain(d).length, 0);
+  return capabilities.domains.reduce((sum, d) => sum + d.areas.length, 0);
 }
 
 /**
@@ -176,29 +145,17 @@ export function getTotalDomainCount(): number {
 export function searchAreas(query: string): Array<{
   area: CapabilityArea;
   domain: CapabilityDomain;
-  category?: CapabilityCategory;
 }> {
   const lowerQuery = query.toLowerCase();
   const results: Array<{
     area: CapabilityArea;
     domain: CapabilityDomain;
-    category?: CapabilityCategory;
   }> = [];
 
   for (const domain of capabilities.domains) {
-    if (isCategorizedDomain(domain)) {
-      for (const category of domain.categories) {
-        for (const area of category.areas) {
-          if (matchesSearch(area, lowerQuery)) {
-            results.push({ area, domain, category });
-          }
-        }
-      }
-    } else {
-      for (const area of domain.areas) {
-        if (matchesSearch(area, lowerQuery)) {
-          results.push({ area, domain });
-        }
+    for (const area of domain.areas) {
+      if (matchesSearch(area, lowerQuery)) {
+        results.push({ area, domain });
       }
     }
   }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tab icon and PWA icon source (OBS-28).
+
+  A geometric glyph rather than lettering, deliberately: rendering text to PNG depends on a font
+  being installed, which would make the generated icons differ between machines. Five ascending
+  bars read as "maturity levels 1-5" at large sizes and as a chart at 16px, which is as much as a
+  favicon can carry.
+
+  Colour is the USWDS blue used as the app's theme primary (`src/theme/index.ts`). White on
+  #0071bc is 5.14:1, above the 3:1 required for a graphical object.
+
+  The PNGs beside this file are generated from it; see `docs/ICONS.md`.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
+     role="img" aria-label="MITA State Self-Assessment Tool">
+  <title>MITA State Self-Assessment Tool</title>
+  <rect width="512" height="512" rx="96" fill="#0071bc" />
+  <g fill="#ffffff">
+    <rect x="128" y="320" width="36" height="64" rx="6" />
+    <rect x="183" y="276" width="36" height="108" rx="6" />
+    <rect x="238" y="232" width="36" height="152" rx="6" />
+    <rect x="293" y="188" width="36" height="196" rx="6" />
+    <rect x="348" y="144" width="36" height="240" rx="6" />
+  </g>
+</svg>

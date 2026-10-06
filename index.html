@@ -2,8 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Asset hrefs use Vite's base-url placeholder; a root-absolute path breaks on a Pages subpath. -->
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0071bc" />
+    <!-- Title and description are set in vite.config.ts; the values here are replaced at build. -->
     <meta name="description" content="MITA 4.0 State Self-Assessment Tool - Assess your Medicaid IT maturity using the ORBIT framework" />
     <title>MITA 4.0 State Self-Assessment Tool</title>
   </head>

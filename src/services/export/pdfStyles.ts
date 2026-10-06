@@ -49,6 +49,14 @@ export const COLORS = {
   darkGray: [100, 100, 100] as [number, number, number],
   /** White */
   white: [255, 255, 255] as [number, number, number],
+  /**
+   * Draft disclaimer red. Matches the app banner's `theme.palette.error.dark`
+   * (`#b0142f`) so the printed notice and the on-screen one are the same colour.
+   * Measured 7.03:1 against white, which clears AA and AAA — and contrast is
+   * symmetric, so that holds both for white text on the cover band and for the
+   * red footer text on the white page.
+   */
+  draft: [176, 20, 47] as [number, number, number],
 } as const;
 
 /**

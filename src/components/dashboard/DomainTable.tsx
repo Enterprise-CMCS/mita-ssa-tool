@@ -27,7 +27,6 @@ import { CapabilityRow } from './CapabilityRow';
 import { TagsDisplay } from './TagsDisplay';
 import { useScores } from '../../hooks';
 import type { CapabilityDomain, CapabilityArea, CapabilityLayer } from '../../types';
-import { getAreasFromDomain, isCategorizedDomain } from '../../types';
 
 /**
  * Layer display configuration
@@ -51,7 +50,6 @@ interface DomainTableProps {
   onResumeAssessment: (areaId: string) => void;
   onEditAssessment: (areaId: string) => void;
   onViewAssessment: (areaId: string) => void;
-  onExportAssessment: (areaId: string) => void;
   onDeleteAssessment: (areaId: string) => void;
   onViewHistory: (historyId: string) => void;
   onDeleteHistory: (historyId: string) => void;
@@ -68,7 +66,6 @@ export function DomainTable({
   onResumeAssessment,
   onEditAssessment,
   onViewAssessment,
-  onExportAssessment,
   onDeleteAssessment,
   onViewHistory,
   onDeleteHistory,
@@ -187,7 +184,7 @@ export function DomainTable({
 
             // Check if any domains in this layer have visible areas after filtering
             const hasVisibleDomains = layerDomains.some((domain) => {
-              const allAreas = getAreasFromDomain(domain);
+              const allAreas = domain.areas;
               const filteredAreas = filterAreas(allAreas);
               return filteredAreas.length > 0 || (!searchQuery && selectedTags.length === 0);
             });
@@ -208,8 +205,12 @@ export function DomainTable({
                       py: 1,
                     }}
                   >
+                    {/* Layer group heading. The Dashboard's only <h1> is the page
+                        title, so these are its second level - without an explicit
+                        component MUI renders <h6> and skips h2-h5. */}
                     <Typography
                       variant="subtitle2"
+                      component="h2"
                       sx={{
                         fontWeight: 700,
                         color: layerConfig.color,
@@ -226,7 +227,7 @@ export function DomainTable({
 
                 {/* Domain Rows for this Layer */}
                 {layerDomains.map((domain) => {
-                  const allAreas = getAreasFromDomain(domain);
+                  const allAreas = domain.areas;
                   const filteredAreas = filterAreas(allAreas);
                   const isExpanded = expandedDomains.has(domain.id);
                   const domainScore = getDomainScore(domain.id);
@@ -297,10 +298,12 @@ export function DomainTable({
                           />
                         </TableCell>
                         <TableCell align="center">
+                          {/* `success.main` is only 4.62:1 on white and drops to
+                              4.24:1 once the row is hovered, so use `.dark`. */}
                           <Typography
                             variant="body2"
                             fontWeight={500}
-                            color={totalCompletion === 100 ? 'success.main' : 'text.secondary'}
+                            color={totalCompletion === 100 ? 'success.dark' : 'text.secondary'}
                           >
                             {totalCompletion}%
                           </Typography>
@@ -323,72 +326,23 @@ export function DomainTable({
 
                       {/* Capability Area Rows */}
                       {isExpanded &&
-                        (isCategorizedDomain(domain)
-                          ? domain.categories.map((category) => {
-                              const categoryAreas = filterAreas(category.areas);
-                              if (
-                                categoryAreas.length === 0 &&
-                                (searchQuery || selectedTags.length > 0)
-                              ) {
-                                return null;
-                              }
-                              return (
-                                <Fragment key={category.id}>
-                                  {/* Category Header */}
-                                  <TableRow>
-                                    <TableCell
-                                      colSpan={6}
-                                      sx={{ bgcolor: 'grey.100', py: 0.5, pl: 6 }}
-                                    >
-                                      <Typography
-                                        variant="caption"
-                                        fontWeight={600}
-                                        color="text.secondary"
-                                      >
-                                        {category.name}
-                                      </Typography>
-                                    </TableCell>
-                                  </TableRow>
-                                  {categoryAreas.map((area) => (
-                                    <CapabilityRow
-                                      key={area.id}
-                                      area={area}
-                                      status={getCapabilityStatus(area.id)}
-                                      score={getCapabilityScore(area.id)}
-                                      tags={getCapabilityTags(area.id)}
-                                      completion={getCapabilityCompletion(area.id)}
-                                      onStart={() => onStartAssessment(area.id)}
-                                      onResume={() => onResumeAssessment(area.id)}
-                                      onEdit={() => onEditAssessment(area.id)}
-                                      onView={() => onViewAssessment(area.id)}
-                                      onExport={() => onExportAssessment(area.id)}
-                                      onDelete={() => onDeleteAssessment(area.id)}
-                                      onViewHistory={onViewHistory}
-                                      onDeleteHistory={onDeleteHistory}
-                                      indentLevel={2}
-                                    />
-                                  ))}
-                                </Fragment>
-                              );
-                            })
-                          : filteredAreas.map((area) => (
-                              <CapabilityRow
-                                key={area.id}
-                                area={area}
-                                status={getCapabilityStatus(area.id)}
-                                score={getCapabilityScore(area.id)}
-                                tags={getCapabilityTags(area.id)}
-                                completion={getCapabilityCompletion(area.id)}
-                                onStart={() => onStartAssessment(area.id)}
-                                onResume={() => onResumeAssessment(area.id)}
-                                onEdit={() => onEditAssessment(area.id)}
-                                onView={() => onViewAssessment(area.id)}
-                                onExport={() => onExportAssessment(area.id)}
-                                onDelete={() => onDeleteAssessment(area.id)}
-                                onViewHistory={onViewHistory}
-                                onDeleteHistory={onDeleteHistory}
-                              />
-                            )))}
+                        filteredAreas.map((area) => (
+                          <CapabilityRow
+                            key={area.id}
+                            area={area}
+                            status={getCapabilityStatus(area.id)}
+                            score={getCapabilityScore(area.id)}
+                            tags={getCapabilityTags(area.id)}
+                            completion={getCapabilityCompletion(area.id)}
+                            onStart={() => onStartAssessment(area.id)}
+                            onResume={() => onResumeAssessment(area.id)}
+                            onEdit={() => onEditAssessment(area.id)}
+                            onView={() => onViewAssessment(area.id)}
+                            onDelete={() => onDeleteAssessment(area.id)}
+                            onViewHistory={onViewHistory}
+                            onDeleteHistory={onDeleteHistory}
+                          />
+                        ))}
                     </Fragment>
                   );
                 })}

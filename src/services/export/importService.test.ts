@@ -78,7 +78,14 @@ describe('importService', () => {
     it('should import valid JSON with no existing data', async () => {
       const assessmentId = uuidv4();
       const exportData = createExportData(
-        [{ id: assessmentId, capabilityAreaId: 'area-1', status: 'finalized', overallScore: 3.5 }],
+        [
+          {
+            id: assessmentId,
+            capabilityAreaId: 'case-management',
+            status: 'finalized',
+            overallScore: 3.5,
+          },
+        ],
         [{ capabilityAssessmentId: assessmentId, currentLevel: 3 }]
       );
 
@@ -93,7 +100,7 @@ describe('importService', () => {
       // Verify data was imported
       const assessments = await db.capabilityAssessments.toArray();
       expect(assessments.length).toBe(1);
-      expect(assessments[0]?.capabilityAreaId).toBe('area-1');
+      expect(assessments[0]?.capabilityAreaId).toBe('case-management');
 
       const ratings = await db.orbitRatings.toArray();
       expect(ratings.length).toBe(1);
@@ -125,7 +132,7 @@ describe('importService', () => {
 
     it('should call progress callback', async () => {
       const progressCallback = vi.fn();
-      const exportData = createExportData([{ capabilityAreaId: 'area-1' }]);
+      const exportData = createExportData([{ capabilityAreaId: 'case-management' }]);
 
       await importFromJson(JSON.stringify(exportData), progressCallback);
 
@@ -140,7 +147,7 @@ describe('importService', () => {
           id: uuidv4(),
           capabilityDomainId: 'provider-management',
           capabilityDomainName: 'Provider Management',
-          capabilityAreaId: 'area-1',
+          capabilityAreaId: 'case-management',
           capabilityAreaName: 'Area 1',
           status: 'finalized',
           tags: ['old-tag'],
@@ -154,7 +161,7 @@ describe('importService', () => {
         const newDate = new Date('2024-06-01');
         const exportData = createExportData([
           {
-            capabilityAreaId: 'area-1',
+            capabilityAreaId: 'case-management',
             status: 'finalized',
             overallScore: 4.0,
             tags: ['new-tag'],
@@ -186,7 +193,7 @@ describe('importService', () => {
           id: uuidv4(),
           capabilityDomainId: 'provider-management',
           capabilityDomainName: 'Provider Management',
-          capabilityAreaId: 'area-1',
+          capabilityAreaId: 'case-management',
           capabilityAreaName: 'Area 1',
           status: 'finalized',
           tags: ['current-tag'],
@@ -200,7 +207,7 @@ describe('importService', () => {
         const oldDate = new Date('2024-01-01');
         const exportData = createExportData([
           {
-            capabilityAreaId: 'area-1',
+            capabilityAreaId: 'case-management',
             status: 'finalized',
             overallScore: 2.0,
             tags: ['old-tag'],
@@ -233,7 +240,7 @@ describe('importService', () => {
           id: uuidv4(),
           capabilityDomainId: 'provider-management',
           capabilityDomainName: 'Provider Management',
-          capabilityAreaId: 'area-1',
+          capabilityAreaId: 'case-management',
           capabilityAreaName: 'Area 1',
           status: 'finalized',
           tags: [],
@@ -246,7 +253,7 @@ describe('importService', () => {
         // Import identical assessment
         const exportData = createExportData([
           {
-            capabilityAreaId: 'area-1',
+            capabilityAreaId: 'case-management',
             status: 'finalized',
             overallScore: 3.5,
             updatedAt: sameDate,
@@ -272,7 +279,7 @@ describe('importService', () => {
           id: uuidv4(),
           capabilityDomainId: 'provider-management',
           capabilityDomainName: 'Provider Management',
-          capabilityAreaId: 'area-1',
+          capabilityAreaId: 'case-management',
           capabilityAreaName: 'Area 1',
           status: 'finalized',
           tags: [],
@@ -286,7 +293,7 @@ describe('importService', () => {
         const oldDate = new Date('2024-01-01');
         const exportData = createExportData([
           {
-            capabilityAreaId: 'area-1',
+            capabilityAreaId: 'case-management',
             status: 'in_progress',
             overallScore: undefined,
             updatedAt: oldDate,
@@ -336,8 +343,8 @@ describe('importService', () => {
 
     it('should provide detailed results for each assessment', async () => {
       const exportData = createExportData([
-        { capabilityAreaId: 'area-1', capabilityAreaName: 'Area One' },
-        { capabilityAreaId: 'area-2', capabilityAreaName: 'Area Two' },
+        { capabilityAreaId: 'case-management', capabilityAreaName: 'Area One' },
+        { capabilityAreaId: 'prior-authorization', capabilityAreaName: 'Area Two' },
       ]);
 
       const result = await importFromJson(JSON.stringify(exportData));
@@ -351,7 +358,7 @@ describe('importService', () => {
   describe('importFromZip', () => {
     it('should import valid ZIP file', async () => {
       const zip = new JSZip();
-      const exportData = createExportData([{ capabilityAreaId: 'area-1' }]);
+      const exportData = createExportData([{ capabilityAreaId: 'case-management' }]);
       zip.file('data.json', JSON.stringify(exportData));
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -395,7 +402,7 @@ describe('importService', () => {
     it('should call progress callback', async () => {
       const progressCallback = vi.fn();
       const zip = new JSZip();
-      const exportData = createExportData([{ capabilityAreaId: 'area-1' }]);
+      const exportData = createExportData([{ capabilityAreaId: 'case-management' }]);
       zip.file('data.json', JSON.stringify(exportData));
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -414,7 +421,7 @@ describe('importService', () => {
         id: assessmentId,
         capabilityDomainId: 'provider-management',
         capabilityDomainName: 'Provider Management',
-        capabilityAreaId: 'area-1',
+        capabilityAreaId: 'case-management',
         capabilityAreaName: 'Area 1',
         status: 'finalized',
         tags: [],
@@ -442,7 +449,7 @@ describe('importService', () => {
       // Create ZIP with attachment
       const zip = new JSZip();
       const exportData = createExportData(
-        [{ id: assessmentId, capabilityAreaId: 'area-1' }],
+        [{ id: assessmentId, capabilityAreaId: 'case-management' }],
         [{ id: ratingId, capabilityAssessmentId: assessmentId }]
       );
       exportData.data.attachments = [
@@ -461,7 +468,7 @@ describe('importService', () => {
       const attachmentsFolder = zip.folder('attachments');
       attachmentsFolder
         ?.folder('provider-management')
-        ?.folder('area-1')
+        ?.folder('case-management')
         ?.file('test-doc.pdf', 'PDF content');
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -498,9 +505,9 @@ describe('importService', () => {
   describe('import multiple assessments', () => {
     it('should import multiple assessments in one operation', async () => {
       const exportData = createExportData([
-        { capabilityAreaId: 'area-1', capabilityAreaName: 'Area 1' },
-        { capabilityAreaId: 'area-2', capabilityAreaName: 'Area 2' },
-        { capabilityAreaId: 'area-3', capabilityAreaName: 'Area 3' },
+        { capabilityAreaId: 'case-management', capabilityAreaName: 'Area 1' },
+        { capabilityAreaId: 'prior-authorization', capabilityAreaName: 'Area 2' },
+        { capabilityAreaId: 'provider-monitoring', capabilityAreaName: 'Area 3' },
       ]);
 
       const result = await importFromJson(JSON.stringify(exportData));
@@ -519,7 +526,7 @@ describe('importService', () => {
         id: uuidv4(),
         capabilityDomainId: 'provider-management',
         capabilityDomainName: 'Provider Management',
-        capabilityAreaId: 'area-1',
+        capabilityAreaId: 'case-management',
         capabilityAreaName: 'Area 1',
         status: 'finalized',
         tags: [],
@@ -533,13 +540,13 @@ describe('importService', () => {
       const exportData = createExportData([
         // New area
         {
-          capabilityAreaId: 'area-2',
+          capabilityAreaId: 'prior-authorization',
           updatedAt: new Date('2024-03-01'),
           finalizedAt: new Date('2024-03-01'),
         },
         // Older than existing (goes to history)
         {
-          capabilityAreaId: 'area-1',
+          capabilityAreaId: 'case-management',
           updatedAt: new Date('2024-01-01'),
           finalizedAt: new Date('2024-01-01'),
           overallScore: 2.0,
@@ -664,10 +671,10 @@ describe('importService', () => {
         [
           {
             id: assessmentId,
-            capabilityDomainId: 'enterprise-governance',
-            capabilityDomainName: 'Enterprise Governance',
-            capabilityAreaId: 'organizational-outcomes', // Organizational assessment
-            capabilityAreaName: 'Organizational Outcomes',
+            capabilityDomainId: 'enterprise-architecture-domain',
+            capabilityDomainName: 'Enterprise Architecture',
+            capabilityAreaId: 'enterprise-governance', // Combined organizational assessment
+            capabilityAreaName: 'Enterprise Governance',
             status: 'finalized',
             overallScore: 3.5,
           },
@@ -707,10 +714,10 @@ describe('importService', () => {
         [
           {
             id: assessmentId,
-            capabilityDomainId: 'enterprise-governance',
-            capabilityDomainName: 'Enterprise Governance',
-            capabilityAreaId: 'organizational-roles', // Organizational assessment
-            capabilityAreaName: 'Organizational Roles',
+            capabilityDomainId: 'enterprise-architecture-domain',
+            capabilityDomainName: 'Enterprise Architecture',
+            capabilityAreaId: 'enterprise-governance', // Combined organizational assessment
+            capabilityAreaName: 'Enterprise Governance',
             status: 'finalized',
             overallScore: 3.0,
           },
@@ -748,7 +755,14 @@ describe('importService', () => {
     it('should preserve current dimension IDs unchanged', async () => {
       const assessmentId = uuidv4();
       const exportData = createExportData(
-        [{ id: assessmentId, capabilityAreaId: 'area-1', status: 'finalized', overallScore: 3.5 }],
+        [
+          {
+            id: assessmentId,
+            capabilityAreaId: 'case-management',
+            status: 'finalized',
+            overallScore: 3.5,
+          },
+        ],
         [
           {
             capabilityAssessmentId: assessmentId,
@@ -777,6 +791,106 @@ describe('importService', () => {
       expect(ratings.find((r) => r.aspectId === 'business-process-performance')?.dimensionId).toBe(
         'businessArchitecture'
       );
+    });
+  });
+
+  describe('area-existence validation (v3 export compatibility)', () => {
+    it('should skip assessments whose capability area is not in the current model', async () => {
+      // v3-shaped export: organizational-outcomes was its own area pre-v4
+      const assessmentId = uuidv4();
+      const exportData = createExportData(
+        [
+          {
+            id: assessmentId,
+            capabilityDomainId: 'enterprise-governance',
+            capabilityDomainName: 'Enterprise Governance',
+            capabilityAreaId: 'organizational-outcomes',
+            capabilityAreaName: 'Organizational Outcomes',
+            status: 'finalized',
+            overallScore: 3.5,
+          },
+        ],
+        [
+          {
+            capabilityAssessmentId: assessmentId,
+            dimensionId: 'outcomes' as OrbitRating['dimensionId'],
+            aspectId: 'culture-mindset',
+            currentLevel: 3,
+          },
+        ]
+      );
+
+      const result = await importFromJson(JSON.stringify(exportData));
+
+      expect(result.success).toBe(true);
+      expect(result.importedAsCurrent).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(result.details[0]?.action).toBe('skipped');
+      expect(result.details[0]?.reason).toBe('Capability area not in current model');
+
+      // Nothing should have been written
+      expect(await db.capabilityAssessments.count()).toBe(0);
+      expect(await db.orbitRatings.count()).toBe(0);
+    });
+
+    it('should skip renamed pre-v4 areas while importing valid ones', async () => {
+      const validId = uuidv4();
+      const removedId = uuidv4();
+      const exportData = createExportData([
+        { id: validId, capabilityAreaId: 'provider-enrollment', status: 'finalized' },
+        {
+          id: removedId,
+          capabilityAreaId: 'provider-screening', // renamed to provider-eligibility in v4
+          capabilityAreaName: 'Provider Screening',
+          status: 'finalized',
+        },
+      ]);
+
+      const result = await importFromJson(JSON.stringify(exportData));
+
+      expect(result.importedAsCurrent).toBe(1);
+      expect(result.skipped).toBe(1);
+
+      const assessments = await db.capabilityAssessments.toArray();
+      expect(assessments.length).toBe(1);
+      expect(assessments[0]?.capabilityAreaId).toBe('provider-enrollment');
+    });
+
+    it('should skip history entries for areas not in the current model', async () => {
+      const exportData = createExportData([
+        { capabilityAreaId: 'case-management', status: 'finalized' },
+      ]);
+
+      // One orphaned history entry (removed area) and one valid entry
+      exportData.data.history = [
+        {
+          id: 'h-orphan',
+          capabilityAssessmentId: uuidv4(),
+          capabilityAreaId: 'organizational-roles', // removed in v4
+          snapshotDate: new Date(),
+          tags: [],
+          overallScore: 3.0,
+          dimensionScores: {},
+          ratings: [],
+        },
+        {
+          id: 'h-valid',
+          capabilityAssessmentId: uuidv4(),
+          capabilityAreaId: 'case-management',
+          snapshotDate: new Date(),
+          tags: [],
+          overallScore: 4.0,
+          dimensionScores: {},
+          ratings: [],
+        },
+      ];
+
+      const result = await importFromJson(JSON.stringify(exportData));
+
+      expect(result.success).toBe(true);
+      const history = await db.assessmentHistory.toArray();
+      expect(history.length).toBe(1);
+      expect(history[0]?.id).toBe('h-valid');
     });
   });
 });

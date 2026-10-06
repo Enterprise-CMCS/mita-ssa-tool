@@ -5,13 +5,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 
+import JSZip from 'jszip';
+
 import { db, clearDatabase } from '../db';
 import {
   exportAsJson,
   exportAsZip,
+  exportDomainCsv,
   generateFilename,
   extractAttachmentIdFromFileName,
 } from './exportService';
+import { calculateDimensionScore } from '../scoring';
+import { DRAFT_NOTICE_LINE } from '../../constants';
 import type { CapabilityAssessment, OrbitRating, Tag } from '../../types';
 
 describe('exportService', () => {
@@ -427,6 +432,224 @@ describe('exportService', () => {
       // the JSON metadata is correct which is what import relies on
       expect(data.data.attachments.some((a: { id: string }) => a.id === attachment1Id)).toBe(true);
       expect(data.data.attachments.some((a: { id: string }) => a.id === attachment2Id)).toBe(true);
+    });
+  });
+
+  describe('CSV maturity profile scoring (OBS-25)', () => {
+    /** Technical Infrastructure Management — 6 aspects. */
+    const INFRA_ASPECTS = [
+      'compute-and-storage',
+      'networking-and-technical-recovery',
+      'identity-access-and-consent',
+      'security-protection-and-monitoring',
+      'system-operations-and-monitoring',
+      'development-testing-release-and-security-compliance',
+    ];
+
+    /** Application Management — 5 aspects. */
+    const APP_ASPECTS = [
+      'api-messaging-and-integration',
+      'application-hosting-and-platform-services',
+      'business-rules-and-workflows',
+      'modular-architecture',
+      'user-interfaces-and-session-management',
+    ];
+
+    /**
+     * Seeds a Technology dimension split unevenly across its two sub-dimensions, so
+     * the correct answer (mean of the sub-dimension means) and the old one (flat mean
+     * over all 11 aspects) differ at one decimal place.
+     */
+    const seedLopsidedTechnology = async (
+      assessmentId: string,
+      infraLevel: number,
+      appLevel: number
+    ): Promise<void> => {
+      const rows: OrbitRating[] = [
+        ...INFRA_ASPECTS.map((aspectId) => ({
+          id: uuidv4(),
+          capabilityAssessmentId: assessmentId,
+          dimensionId: 'technology' as const,
+          subDimensionId: 'technologyInfrastructureManagement' as const,
+          aspectId,
+          currentLevel: infraLevel as OrbitRating['currentLevel'],
+          targetLevel: infraLevel as OrbitRating['targetLevel'],
+          questionResponses: [],
+          evidenceResponses: [],
+          notes: '',
+          barriers: '',
+          plans: '',
+          carriedForward: false,
+          attachmentIds: [],
+          updatedAt: new Date(),
+        })),
+        ...APP_ASPECTS.map((aspectId) => ({
+          id: uuidv4(),
+          capabilityAssessmentId: assessmentId,
+          dimensionId: 'technology' as const,
+          subDimensionId: 'applicationManagement' as const,
+          aspectId,
+          currentLevel: appLevel as OrbitRating['currentLevel'],
+          targetLevel: appLevel as OrbitRating['targetLevel'],
+          questionResponses: [],
+          evidenceResponses: [],
+          notes: '',
+          barriers: '',
+          plans: '',
+          carriedForward: false,
+          attachmentIds: [],
+          updatedAt: new Date(),
+        })),
+      ];
+      await db.orbitRatings.bulkAdd(rows);
+    };
+
+    /** Returns the As-Is / To-Be cells of the Technology row. */
+    const technologyRow = (csv: string): { asIs: string; toBe: string } => {
+      const line = csv.split('\n').find((l) => l.startsWith('Technology,'));
+      const parts = (line ?? '').split(',');
+      return { asIs: parts[1] ?? '', toBe: parts[2] ?? '' };
+    };
+
+    it('reports the sub-dimension-weighted Technology score, not a flat mean', async () => {
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3);
+      await seedLopsidedTechnology(assessment.id, 5, 1);
+
+      const csv = await exportDomainCsv('provider-management', 'Testlandia');
+
+      expect(csv).not.toBeNull();
+      // mean(mean(5×6), mean(1×5)) = mean(5, 1) = 3.0, where the flat mean over 11
+      // aspects would give (30 + 5) / 11 = 3.18 -> 3.2.
+      expect(technologyRow(csv!).asIs).toBe('3.0');
+    });
+
+    it('matches the canonical scorer rather than a hardcoded figure', async () => {
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3);
+      await seedLopsidedTechnology(assessment.id, 4, 1);
+
+      const csv = await exportDomainCsv('provider-management', 'Testlandia');
+      const stored = await db.orbitRatings
+        .where('capabilityAssessmentId')
+        .equals(assessment.id)
+        .toArray();
+      const canonical = calculateDimensionScore('technology', stored);
+
+      expect(canonical).not.toBeNull();
+      expect(technologyRow(csv!).asIs).toBe(canonical!.toFixed(1));
+    });
+
+    it('applies the same weighting to the To-Be column', async () => {
+      // The To-Be column had the identical flaw and no canonical scorer to delegate
+      // to, since `calculateDimensionScore` only read `currentLevel`.
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3);
+      await seedLopsidedTechnology(assessment.id, 5, 1);
+
+      const csv = await exportDomainCsv('provider-management', 'Testlandia');
+
+      expect(technologyRow(csv!).toBe).toBe('3.0');
+    });
+
+    it('leaves the To-Be cell empty when no aspect carries a target', async () => {
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3);
+      await db.orbitRatings.add({
+        id: uuidv4(),
+        capabilityAssessmentId: assessment.id,
+        dimensionId: 'technology',
+        subDimensionId: 'applicationManagement',
+        aspectId: 'modular-architecture',
+        currentLevel: 3,
+        questionResponses: [],
+        evidenceResponses: [],
+        notes: '',
+        barriers: '',
+        plans: '',
+        carriedForward: false,
+        attachmentIds: [],
+        updatedAt: new Date(),
+      });
+
+      const csv = await exportDomainCsv('provider-management', 'Testlandia');
+
+      expect(technologyRow(csv!).asIs).toBe('3.0');
+      expect(technologyRow(csv!).toBe).toBe('');
+    });
+  });
+
+  describe('draft notice (Decision 4)', () => {
+    it('carries the notice in the JSON envelope', async () => {
+      const json = await exportAsJson({ scope: 'full', format: 'json' });
+      const data = JSON.parse(json);
+
+      expect(data.draftNotice).toBe(DRAFT_NOTICE_LINE);
+    });
+
+    it('carries the notice in the ZIP manifest', async () => {
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3.5);
+      await createTestRating(assessment.id);
+
+      const blob = await exportAsZip({ scope: 'full', format: 'zip', includeAttachments: false });
+      const zip = await JSZip.loadAsync(blob);
+      const manifest = JSON.parse((await zip.file('manifest.json')?.async('string')) ?? '{}');
+
+      expect(manifest.draftNotice).toBe(DRAFT_NOTICE_LINE);
+    });
+
+    it('carries the notice in the ZIP CSV profiles', async () => {
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3.5);
+      await createTestRating(assessment.id);
+
+      const blob = await exportAsZip({ scope: 'full', format: 'zip', includeAttachments: false });
+      const zip = await JSZip.loadAsync(blob);
+      const csv = await zip
+        .file('maturity-profiles/all-domains-maturity-profile.csv')
+        ?.async('string');
+
+      expect(csv).toContain(DRAFT_NOTICE_LINE);
+    });
+
+    it('omits the notice from JSON and the ZIP manifest at go-live', async () => {
+      const assessment = await createTestAssessment('provider-enrollment', 'finalized', 3.5);
+      await createTestRating(assessment.id);
+
+      // `IS_DRAFT` resolves at module load, so the whole module graph has to be
+      // re-imported after stubbing the variable.
+      vi.resetModules();
+      vi.stubEnv('VITE_DRAFT_MODE', 'false');
+      // Re-importing the module graph constructs a *second* Dexie instance over the
+      // same database name while the suite's original stays open. Two live
+      // connections to one IndexedDB name is a known source of intermittent
+      // `versionchange` failures, so the duplicate is closed in the `finally` below.
+      let reimportedDb: { close: () => void } | undefined;
+      try {
+        const { exportAsJson: jsonAtGoLive, exportAsZip: zipAtGoLive } =
+          await import('./exportService');
+        reimportedDb = (await import('../db')).db;
+
+        const json = await jsonAtGoLive({ scope: 'full', format: 'json' });
+        expect(JSON.parse(json).draftNotice).toBeUndefined();
+        expect(json).not.toContain('still being piloted');
+
+        const blob = await zipAtGoLive({
+          scope: 'full',
+          format: 'zip',
+          includeAttachments: false,
+        });
+        const zip = await JSZip.loadAsync(blob);
+        const manifest = JSON.parse((await zip.file('manifest.json')?.async('string')) ?? '{}');
+        const csv = await zip
+          .file('maturity-profiles/all-domains-maturity-profile.csv')
+          ?.async('string');
+
+        expect(manifest.draftNotice).toBeUndefined();
+        expect(csv).not.toContain('DRAFT');
+        // Still a working export, not an empty one.
+        expect(manifest.stats.totalAssessments).toBe(1);
+        expect(csv).toContain('Capability Area:');
+      } finally {
+        reimportedDb?.close();
+        vi.unstubAllEnvs();
+        vi.resetModules();
+      }
     });
   });
 });

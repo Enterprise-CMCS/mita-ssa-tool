@@ -11,15 +11,19 @@ This document defines the development standards for the MITA 4.0 State Self-Asse
 The MITA 4.0 State Self-Assessment Tool is a Progressive Web App (PWA) that enables State Medicaid Agencies (SMAs) to self-assess their Medicaid Enterprise maturity using the **ORBIT Maturity Model**. Key characteristics:
 
 - **Privacy-First**: All data stays in the browser (IndexedDB). No server, no data transmission.
-- **Offline-First**: Full functionality after initial load, even without network.
+- **Offline-First**: Two separate properties — keep them separate when reasoning about a change.
+  _Storage_ is local (IndexedDB), so saving never touches the network. _Delivery_ is cached by a
+  service worker, so a reload with no network succeeds. Only the first was true until Wave 8; the
+  app shipped the offline claim for months with no service worker at all (OBS-22). If you are
+  about to assert offline behaviour, say which half you mean.
 - **Accessibility**: WCAG 2.1 AA compliant for government use.
 
 ### Key Domain Terminology
 
 | Term                  | Definition                                                                                                                                                                                     |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Capability Domain** | High-level capability grouping (e.g., "Provider Management"). 16 domains across 3 layers.                                                                                                      |
-| **Capability Area**   | Specific capability being assessed (e.g., "Provider Enrollment"). 66 total areas.                                                                                                              |
+| **Capability Domain** | High-level capability grouping (e.g., "Provider Management"). 14 domains across 3 layers (Strategic 3, Core 7, Support 4).                                                                     |
+| **Capability Area**   | Specific capability being assessed (e.g., "Provider Enrollment"). 72 total areas.                                                                                                              |
 | **ORBIT**             | Assessment framework: **O**utcomes, **R**oles, **B**usiness Architecture, **I**nformation, **T**echnology. B-I-T are required per-capability dimensions; O & R are organizational assessments. |
 | **Dimension**         | One of the 3 standard ORBIT categories assessed per capability (B, I, T). All required.                                                                                                        |
 | **Sub-Dimension**     | Only applies to Technology (2 sub-dimensions: Technical Infrastructure Management, Application Management)                                                                                     |
@@ -190,8 +194,7 @@ src/
 │   └── index.ts
 ├── data/
 │   ├── capabilities.json     # Capability Reference Model
-│   ├── orbit-model.json      # ORBIT Maturity Criteria
-│   └── templates/            # Export templates
+│   └── orbit-model.json      # ORBIT Maturity Criteria
 ├── hooks/
 │   ├── useCapabilityAssessments.ts
 │   ├── useCapabilityAssessments.test.ts
@@ -281,17 +284,19 @@ type ScoreMap = Record<string, number>;
 Use type guards for runtime type checking, especially with the capability model:
 
 ```typescript
-// Type guard for categorized domains (Enterprise Data Management, Enterprise Technology)
-export function isCategorizedDomain(
-  domain: CapabilityDomain
-): domain is CategorizedCapabilityDomain {
-  return 'categories' in domain && Array.isArray(domain.categories);
+// Type guard narrowing a rating's dimensionId to an organizational section.
+// Prefer this over inline literal comparisons — hand-written unions have
+// drifted before (see OBS-1 in docs/CODEBASE_OBSERVATIONS.md).
+export function isOrganizationalDimensionId(
+  dimensionId: string
+): dimensionId is OrganizationalAssessmentId {
+  return (ORGANIZATIONAL_SECTIONS as readonly string[]).includes(dimensionId);
 }
 
-// Usage
-const areas = isCategorizedDomain(domain)
-  ? domain.categories.flatMap((c) => c.areas)
-  : domain.areas;
+// Usage — the false branch narrows to OrbitDimensionId, no cast needed
+const aspect = isOrganizationalDimensionId(rating.dimensionId)
+  ? getOrganizationalAspect(rating.dimensionId, rating.aspectId)
+  : getAspect(rating.dimensionId, rating.aspectId, rating.subDimensionId);
 ```
 
 ### Path Aliases
@@ -386,7 +391,8 @@ Use the `useDebouncedSave` hook for text fields that auto-save:
 ```typescript
 import { useDebouncedSave } from '../../hooks';
 
-// In component
+// AspectCard passes 500 explicitly. UI.DEBOUNCE_MS (300) is NOT the value used
+// for assessment text fields — pass the delay you want rather than assuming it.
 const [localNotes, setLocalNotes] = useDebouncedSave(
   rating?.notes ?? '',
   onNotesChange,
@@ -632,7 +638,7 @@ db.version(2)
   });
 ```
 
-**Note**: Currently at version 1. Document any schema changes in PROJECT_FOUNDATION_v2.md.
+**Note**: Currently at version 4. Versions 2, 3, and 4 are all clean-break upgrades that clear every table, because each accompanied a model restructure that invalidated stored data. Document any schema change in PROJECT_FOUNDATION_v2.md.
 
 ---
 
@@ -673,7 +679,7 @@ const style = useMemo(() => ({ margin: 10 }), []);
 
 - Use `useLiveQuery` for automatic updates from IndexedDB
 - Implement loading states for async operations
-- The app loads all assessments/ratings upfront (66 areas × 26 standard aspects is manageable)
+- The app loads all assessments/ratings upfront (72 areas × 26 standard aspects is manageable)
 
 ### Bundle Size
 
@@ -876,7 +882,107 @@ npm run audit:code   # Detect unused code (knip)
 npm test             # Run tests once
 npm run test:watch   # Watch mode
 npm run test:coverage # Coverage report
+
+# Build-time artifacts
+npm run generate:workbook         # Regenerate the offline XLSX workbook into public/
+npm run verify:workbook-artifact  # Check the workbook that shipped into dist/
+npm run verify:workbook-excel     # Verify its formulas in Excel (macOS + Excel only, not in CI)
 ```
+
+**Node 22.18 or newer is required** (declared in `engines` and `.nvmrc`). The workbook
+generator is a TypeScript file executed directly by Node, which needs Node's native type
+stripping. On Node 20 it fails with an unknown-file-extension error, while `npm test` still
+passes because vitest transforms through Vite — so a too-old Node fails in a confusing place.
+
+---
+
+## 16. The `scripts/` Directory
+
+Build-time tooling lives in `scripts/`, written in TypeScript and run directly by Node. It is
+covered by `typecheck`, `lint`, `knip` and `format:check` exactly like `src/`, and its tests
+run under `npm test`.
+
+| Path                                  | Purpose                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| `scripts/generate-xlsx-workbook.ts`   | Generates the offline Excel workbook into `public/`                         |
+| `scripts/xlsx/model.ts`               | Node-safe view of the capability and ORBIT models, read from the JSON files |
+| `scripts/xlsx/constants.ts`           | Declarative sheet, column and layout configuration                          |
+| `scripts/xlsx/rows.ts`                | Pure row builders, testable without ExcelJS                                 |
+| `scripts/xlsx/workbook.ts`            | ExcelJS assembly and the Section 508 structure                              |
+| `scripts/xlsx/paths.ts`               | Repository-root path resolution and the workbook output path                |
+| `scripts/xlsx/scoring-spec.ts`        | The scoring rules, as JS functions **and** as Excel formula generators      |
+| `scripts/xlsx/profile-rows.ts`        | Row builders for the four calculated sheets, `06`-`09`                      |
+| `scripts/xlsx/excel-rounding.ts`      | Model of Excel's `ROUND`, plus the fixtures that check the model            |
+| `scripts/xlsx/prove-assertions.ts`    | Mutation harness proving each assertion can fail                            |
+| `scripts/verify-workbook-artifact.ts` | Integrity check on the workbook that shipped into `dist/`                   |
+| `scripts/verify-workbook-in-excel.ts` | Arithmetic verification by driving Excel over AppleScript                   |
+
+### Verifying workbook changes
+
+The generator emits Excel **formulas**, and no test in this repo can evaluate one. A green suite
+therefore proves the generator emitted the string it intended, not that Excel computes the right
+answer from it. Three defects shipped past a fully green suite because of exactly this gap, and two
+more shipped past the scripted Excel check because that check read only score cells.
+
+So, for any change to what the generator emits:
+
+1. `npm run generate:workbook`
+2. `npm run verify:workbook-excel` — drives Excel, seeds input cells, reads computed cells back and
+   compares against the same JS model the unit tests use. **Requires macOS and Excel, so CI cannot
+   run it.** If you add a column, add an expectation that reads it.
+3. `node scripts/xlsx/prove-assertions.ts` — confirms every assertion can still fail. It rewrites
+   source files in place and restores them, so run it on a clean tree and never alongside `npm test`.
+
+**Generation is automatic.** A `prebuild` script generates the workbook, so `npm run build` always
+produces a current one — locally, in `ci.yml` and in `deploy.yml` alike. `predev` does the same for
+the dev server, because the artifact is gitignored and the in-app download links would otherwise
+404 in development. Step 1 above is therefore rarely needed by hand. **Use `npm run dev`, not a bare
+`vite`** — the latter skips `predev` and the download links 404.
+
+**The filename lives in `src/constants/workbook.ts`, not in `scripts/`.** `paths.ts` imports it, so
+the generator's output path and the in-app download URL are built from one string. A rename touching
+only one of them 404s the link a pilot user clicks while every test and the artifact check stay
+green, because both of those only ever look at the file the generator wrote. That module is
+Node-safe by the same contract as `draftNotice.ts` — no imports, no `import.meta` — which is what
+makes it importable from `scripts/`. The name is still a literal in `.gitignore`, which cannot
+import anything.
+
+**`npm run verify:workbook-artifact` covers the file that ships**, which is a different object from
+the ones above: `npm test` builds a workbook in memory and never reads a file, and
+`verify:workbook-excel` reads the `public/` copy. This one opens `dist/` — the only copy a pilot
+user downloads — and checks it is a real, complete, openable workbook. Both workflows run it after
+the build, so a site whose download links 404 fails the deploy rather than shipping. It is an
+integrity check only; correctness is still steps 2 and 3.
+
+Do not add a `public/`-versus-`dist/` comparison to it. That was built and removed: the build
+timestamp lands in `docProps/core.xml`, so two runs of an unchanged model differ in content as well
+as in ZIP bytes, and the check fired on healthy trees while catching nothing the presence, ZIP,
+open and sheet checks miss.
+
+Two rules earned the hard way:
+
+- **Prefer formulas whose correctness does not depend on Excel's array-evaluation rules.** A
+  criteria-based `IF` over a range looks right, satisfies every string assertion, and silently reads
+  the wrong rows via implicit intersection.
+- **Functions added after Excel 2007 must be stored with an `_xlfn.` prefix**, which ExcelJS does not
+  add. Without it Excel does not recognise the function and the cell reads `#NAME?`.
+  `workbook.raw.test.ts` enforces this against an allowlist of pre-2007 functions.
+
+Three rules specific to this directory, each learned the hard way:
+
+**Never import `src/constants/index.ts` or anything that reaches it.** It reads
+`import.meta.env` at module scope, which is `undefined` under plain Node, so touching it
+throws. `src/constants/draftNotice.ts` was deliberately split out to be Node-safe and _can_
+be imported. Derive environment flags from `process.env`, never `import.meta.env`.
+
+**Never use `new URL(<string literal>, import.meta.url)`.** Vite statically rewrites that
+exact pattern into an asset URL, so it works under plain Node and throws under vitest — and
+not uniformly, which makes it worse. Compose paths from a bare `import.meta.url` via
+`node:path`; `scripts/xlsx/paths.ts` is the single place that happens.
+
+**Heavy dependencies here stay `devDependencies`.** ExcelJS is pinned and build-time only, so
+it never enters the browser bundle of an offline-first PWA. Verify with
+`npm ls <pkg> --omit=dev` rather than assuming.
 
 ---
 

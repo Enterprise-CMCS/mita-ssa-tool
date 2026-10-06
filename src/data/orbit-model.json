@@ -1,6 +1,6 @@
 {
   "version": "4.0",
-  "lastUpdated": "2026-05-03",
+  "lastUpdated": "2026-07-30",
   "source": "MITA 4.0 Maturity Model - PRA Submission (May 2026)",
   "maturityLevels": {
     "level1": {
@@ -1311,7 +1311,7 @@
       "id": "outcomes",
       "name": "Organizational Outcomes",
       "description": "The definition of the desired outcomes that require the capability to be achieved. (Optional)",
-      "capabilityAreaId": "organizational-outcomes",
+      "capabilityAreaId": "enterprise-governance",
       "aspects": [
         {
           "id": "culture-mindset",
@@ -1511,7 +1511,7 @@
       "id": "roles",
       "name": "Organizational Roles",
       "description": "The individual roles responsible for providing the capability. (Optional)",
-      "capabilityAreaId": "organizational-roles",
+      "capabilityAreaId": "enterprise-governance",
       "aspects": [
         {
           "id": "organizational-goals-alignment",
@@ -1679,7 +1679,7 @@
       "id": "enterprise-architecture",
       "name": "Organizational Enterprise Architecture",
       "description": "Assesses the organization's maturity in enterprise-level planning, governance, and architectural frameworks across the Medicaid enterprise.",
-      "capabilityAreaId": "organizational-enterprise-architecture",
+      "capabilityAreaId": "enterprise-governance",
       "aspects": [
         {
           "id": "business-capability",

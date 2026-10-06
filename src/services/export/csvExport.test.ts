@@ -6,12 +6,13 @@
  * Organizational assessments use direct aspects with "Aspect" header.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   generateMaturityProfileCsv,
   generateCombinedMaturityProfileCsv,
   parseMaturityProfileCsv,
 } from './csvExport';
+import { DRAFT_NOTICE_LINE } from '../../constants';
 import type { MaturityProfile, CapabilityAreaProfile } from './types';
 
 describe('csvExport', () => {
@@ -62,13 +63,11 @@ describe('csvExport', () => {
   const createOrganizationalAreaProfile = (
     domainName: string,
     areaName: string,
-    organizationalType: 'outcomes' | 'roles',
     rows: CapabilityAreaProfile['rows'] = []
   ): CapabilityAreaProfile => ({
     domainName,
     areaName,
     isOrganizationalAssessment: true,
-    organizationalType,
     rows:
       rows.length > 0
         ? rows
@@ -273,7 +272,7 @@ describe('csvExport', () => {
   describe('generateMaturityProfileCsv - Organizational Assessments', () => {
     it('should use Aspect column header for organizational assessments', () => {
       const profile = createProfile('Test State', 'Enterprise Governance', [
-        createOrganizationalAreaProfile('Enterprise Governance', 'Outcomes Assessment', 'outcomes'),
+        createOrganizationalAreaProfile('Enterprise Governance', 'Outcomes Assessment'),
       ]);
 
       const csv = generateMaturityProfileCsv(profile);
@@ -284,7 +283,7 @@ describe('csvExport', () => {
 
     it('should include aspect rows for organizational assessments', () => {
       const profile = createProfile('Test State', 'Enterprise Governance', [
-        createOrganizationalAreaProfile('Enterprise Governance', 'Outcomes Assessment', 'outcomes'),
+        createOrganizationalAreaProfile('Enterprise Governance', 'Outcomes Assessment'),
       ]);
 
       const csv = generateMaturityProfileCsv(profile);
@@ -295,7 +294,7 @@ describe('csvExport', () => {
 
     it('should handle organizational assessment notes and barriers', () => {
       const profile = createProfile('Test State', 'Enterprise Governance', [
-        createOrganizationalAreaProfile('Enterprise Governance', 'Roles Assessment', 'roles', [
+        createOrganizationalAreaProfile('Enterprise Governance', 'Roles Assessment', [
           {
             dimension: 'Role Aspect',
             asIs: '2.0',
@@ -349,9 +348,15 @@ describe('csvExport', () => {
       const csv = generateCombinedMaturityProfileCsv([], 'Test State');
 
       expect(csv).toContain('MITA 4.0 Maturity Profile: Test State');
-      // Should just have header and blank line
+      // No area sections, so the only content is the preamble: the state header
+      // plus the draft notice while the tool is built in draft mode. Asserted by
+      // absence of area markup rather than by a line count, which would have to be
+      // rewritten again at go-live when the notice disappears.
       const lines = csv.split('\n').filter((l) => l.trim() !== '' && l !== ',,,,,');
-      expect(lines.length).toBe(1);
+      expect(lines[0]).toContain('MITA 4.0 Maturity Profile: Test State');
+      expect(csv).not.toContain('Capability Domain:');
+      expect(csv).not.toContain('Capability Area:');
+      expect(lines.length).toBeLessThanOrEqual(2);
     });
 
     it('should handle mixed standard and organizational assessments', () => {
@@ -360,11 +365,7 @@ describe('csvExport', () => {
           createStandardAreaProfile('Provider Management', 'Provider Enrollment'),
         ]),
         createProfile('Test State', 'Enterprise Governance', [
-          createOrganizationalAreaProfile(
-            'Enterprise Governance',
-            'Outcomes Assessment',
-            'outcomes'
-          ),
+          createOrganizationalAreaProfile('Enterprise Governance', 'Outcomes Assessment'),
         ]),
       ];
 
@@ -559,29 +560,24 @@ Aspect 2,2.5,3.5,,,Plans here`;
 
     it('should preserve data through generate -> parse cycle for organizational assessments', () => {
       const original = createProfile('Round Trip State', 'Enterprise Governance', [
-        createOrganizationalAreaProfile(
-          'Enterprise Governance',
-          'Outcomes Assessment',
-          'outcomes',
-          [
-            {
-              dimension: 'Outcome Aspect 1',
-              asIs: '3.0',
-              toBe: '4.0',
-              notes: 'Important notes',
-              barriers: 'Some barriers',
-              plans: 'Future plans',
-            },
-            {
-              dimension: 'Outcome Aspect 2',
-              asIs: '2.5',
-              toBe: '3.5',
-              notes: '',
-              barriers: '',
-              plans: '',
-            },
-          ]
-        ),
+        createOrganizationalAreaProfile('Enterprise Governance', 'Outcomes Assessment', [
+          {
+            dimension: 'Outcome Aspect 1',
+            asIs: '3.0',
+            toBe: '4.0',
+            notes: 'Important notes',
+            barriers: 'Some barriers',
+            plans: 'Future plans',
+          },
+          {
+            dimension: 'Outcome Aspect 2',
+            asIs: '2.5',
+            toBe: '3.5',
+            notes: '',
+            barriers: '',
+            plans: '',
+          },
+        ]),
       ]);
 
       const csv = generateMaturityProfileCsv(original);
@@ -598,6 +594,224 @@ Aspect 2,2.5,3.5,,,Plans here`;
       expect(rows[0]?.notes).toBe('Important notes');
       expect(rows[0]?.barriers).toBe('Some barriers');
       expect(rows[0]?.plans).toBe('Future plans');
+    });
+  });
+
+  describe('organizational section labels', () => {
+    const sectionedProfile = (): MaturityProfile =>
+      createProfile('Test State', 'Enterprise Architecture', [
+        {
+          domainName: 'Enterprise Architecture',
+          areaName: 'Enterprise Governance',
+          isOrganizationalAssessment: true,
+          rows: [
+            {
+              dimension: 'Organizational Outcomes',
+              asIs: '',
+              toBe: '',
+              notes: '',
+              barriers: '',
+              plans: '',
+              isSectionLabel: true,
+            },
+            {
+              dimension: 'Culture Mindset',
+              asIs: '3',
+              toBe: '4',
+              notes: 'outcome note',
+              barriers: '',
+              plans: '',
+            },
+            {
+              dimension: 'Organizational Roles',
+              asIs: '',
+              toBe: '',
+              notes: '',
+              barriers: '',
+              plans: '',
+              isSectionLabel: true,
+            },
+            {
+              dimension: 'Communication',
+              asIs: '2',
+              toBe: '3',
+              notes: 'roles note',
+              barriers: '',
+              plans: '',
+            },
+          ],
+        },
+      ]);
+
+    it('should emit a Section label row before each section', () => {
+      const csv = generateMaturityProfileCsv(sectionedProfile());
+
+      expect(csv).toContain('Section: Organizational Outcomes,,,,,');
+      expect(csv).toContain('Section: Organizational Roles,,,,,');
+
+      // Labels appear before their aspects
+      const outcomesIndex = csv.indexOf('Section: Organizational Outcomes');
+      const cultureIndex = csv.indexOf('Culture Mindset');
+      const rolesIndex = csv.indexOf('Section: Organizational Roles');
+      expect(outcomesIndex).toBeLessThan(cultureIndex);
+      expect(cultureIndex).toBeLessThan(rolesIndex);
+    });
+
+    it('should skip Section label rows when parsing (round-trip preserves aspects)', () => {
+      const csv = generateMaturityProfileCsv(sectionedProfile());
+      const parsed = parseMaturityProfileCsv(csv);
+
+      expect(parsed).not.toBeNull();
+      const rows = parsed?.areas[0]?.rows ?? [];
+
+      // Only the two aspect rows survive parsing; labels are structural
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.dimension)).toEqual(['Culture Mindset', 'Communication']);
+      expect(rows[0]?.asIs).toBe('3');
+      expect(rows[1]?.notes).toBe('roles note');
+    });
+  });
+
+  describe('draft notice (Decision 4)', () => {
+    const profile = (): MaturityProfile =>
+      createProfile('Test State', 'Provider Management', [
+        createStandardAreaProfile('Provider Management', 'Provider Enrollment'),
+      ]);
+
+    it('emits the notice in the single-domain profile', () => {
+      const csv = generateMaturityProfileCsv(profile());
+
+      expect(csv).toContain(DRAFT_NOTICE_LINE);
+    });
+
+    it('pins the literal notice prefix, which is a wire format', () => {
+      // Deliberately the literal, not the constant. `parseMaturityProfileCsv` derives
+      // its skip prefix from DRAFT_NOTICE_LABEL, so renaming the label would keep this
+      // whole suite green while making every CSV already exported during the pilot
+      // unparseable. Asserting the constant here would defeat the point.
+      expect(DRAFT_NOTICE_LINE.startsWith('Predecisional Pilot Materials:')).toBe(true);
+    });
+
+    it('still skips the earlier DRAFT: prefix, so older exports keep parsing', () => {
+      // The notice wording changed once already, at CMS's request. Files exported under
+      // the old copy must not become unreadable, so the parser recognises both prefixes
+      // and this pins the legacy one specifically.
+      const csv = [
+        'MITA 4.0 Maturity Profile: Legacy State,,,,,',
+        'DRAFT: This is a draft version of the MITA 4.0 State Self-Assessment Tool.,,,,,',
+        ',,,,,',
+        'Capability Domain: Provider Management,,,,,',
+        'Capability Area: Provider Enrollment,,,,,',
+        'ORBIT,As Is,To Be,Notes,Barriers & Challenges,Advancement Plans',
+        'Business Architecture,3.0,4.0,,,',
+        ',,,,,',
+      ].join('\n');
+
+      const parsed = parseMaturityProfileCsv(csv);
+
+      expect(parsed?.stateName).toBe('Legacy State');
+      expect(parsed?.areas[0]?.rows.map((r) => r.dimension)).toEqual(['Business Architecture']);
+    });
+
+    it('quotes the notice, because the approved wording contains commas', () => {
+      // `escapeCSVField` wraps any field containing a comma. The PRA sentence has two,
+      // so the emitted row is quoted — and the parser's skip has to cope with a leading
+      // quote. Pinned because it is the interaction between two things that were
+      // written independently.
+      const noticeLine = generateMaturityProfileCsv(profile())
+        .split('\n')
+        .find((l) => l.includes('Predecisional Pilot Materials'));
+
+      expect(noticeLine?.startsWith('"')).toBe(true);
+      expect(parseMaturityProfileCsv(generateMaturityProfileCsv(profile()))?.stateName).toBe(
+        'Test State'
+      );
+    });
+
+    it('emits the notice in the combined profile', () => {
+      const csv = generateCombinedMaturityProfileCsv([profile()], 'Test State');
+
+      expect(csv).toContain(DRAFT_NOTICE_LINE);
+    });
+
+    it('places the notice below the state header, never above it', () => {
+      // This ordering is load-bearing, not cosmetic. `parseMaturityProfileCsv` reads
+      // the state name from `lines[0]` specifically, so a notice on the first line
+      // would make every parsed state name `Unknown`.
+      const lines = generateMaturityProfileCsv(profile()).split('\n');
+
+      expect(lines[0]).toContain('MITA 4.0 Maturity Profile: Test State');
+      expect(lines[1]).toContain(DRAFT_NOTICE_LINE);
+    });
+
+    it('pads the notice row to the full six columns', () => {
+      // Matches the file's existing `,,,,,` convention so the row does not read as a
+      // ragged one-column line to a spreadsheet.
+      const noticeLine = generateMaturityProfileCsv(profile())
+        .split('\n')
+        .find((l) => l.includes(DRAFT_NOTICE_LINE));
+
+      expect(noticeLine).toBeDefined();
+      expect(noticeLine?.endsWith(',,,,,')).toBe(true);
+    });
+
+    it('still parses the state name with the notice present', () => {
+      const csv = generateMaturityProfileCsv(profile());
+      const parsed = parseMaturityProfileCsv(csv);
+
+      expect(parsed?.stateName).toBe('Test State');
+    });
+
+    it('does not read the notice as a data row', () => {
+      const csv = generateMaturityProfileCsv(profile());
+      const parsed = parseMaturityProfileCsv(csv);
+      const dimensions = parsed?.areas.flatMap((a) => a.rows.map((r) => r.dimension)) ?? [];
+
+      expect(dimensions).toEqual(['Business Architecture', 'Information', 'Technology']);
+      expect(dimensions.some((d) => d.includes('DRAFT'))).toBe(false);
+    });
+
+    it('omits the notice entirely at go-live', async () => {
+      // Decision 13: `VITE_DRAFT_MODE=false` has to strip the disclaimer from every
+      // surface, not just the app. `IS_DRAFT` resolves at module load, so the module
+      // has to be re-imported after stubbing rather than merely re-called.
+      vi.resetModules();
+      vi.stubEnv('VITE_DRAFT_MODE', 'false');
+      try {
+        const { generateMaturityProfileCsv: generateAtGoLive } = await import('./csvExport');
+        const csv = generateAtGoLive(profile());
+
+        expect(csv).not.toContain('DRAFT');
+        expect(csv).not.toContain('still being piloted');
+        // The state header is still first, and nothing else was disturbed.
+        expect(csv.split('\n')[0]).toContain('MITA 4.0 Maturity Profile: Test State');
+        expect(csv).toContain('Capability Area: Provider Enrollment');
+      } finally {
+        vi.unstubAllEnvs();
+        vi.resetModules();
+      }
+    });
+
+    it('skips a notice line by content, so a pilot-era file still parses after go-live', () => {
+      // The parser must not depend on the current `IS_DRAFT` value: a profile
+      // exported during the pilot may be imported once the flag is off, and it will
+      // still carry the line. Hand-built rather than generated, so this holds whatever
+      // the flag is set to in the test environment.
+      const csv = [
+        'MITA 4.0 Maturity Profile: Pilot State,,,,,',
+        `${DRAFT_NOTICE_LINE},,,,,`,
+        ',,,,,',
+        'Capability Domain: Provider Management,,,,,',
+        'Capability Area: Provider Enrollment,,,,,',
+        'ORBIT,As Is,To Be,Notes,Barriers & Challenges,Advancement Plans',
+        'Business Architecture,3.0,4.0,,,',
+        ',,,,,',
+      ].join('\n');
+
+      const parsed = parseMaturityProfileCsv(csv);
+
+      expect(parsed?.stateName).toBe('Pilot State');
+      expect(parsed?.areas[0]?.rows.map((r) => r.dimension)).toEqual(['Business Architecture']);
     });
   });
 });

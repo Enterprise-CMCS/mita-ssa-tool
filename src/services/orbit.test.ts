@@ -316,7 +316,7 @@ describe('orbit service', () => {
       expect(assessment).toBeDefined();
       expect(assessment.id).toBe('outcomes');
       expect(assessment.name).toBe('Organizational Outcomes');
-      expect(assessment.capabilityAreaId).toBe('organizational-outcomes');
+      expect(assessment.capabilityAreaId).toBe('enterprise-governance');
     });
 
     it('should return roles organizational assessment', () => {
@@ -324,7 +324,12 @@ describe('orbit service', () => {
       expect(assessment).toBeDefined();
       expect(assessment.id).toBe('roles');
       expect(assessment.name).toBe('Organizational Roles');
-      expect(assessment.capabilityAreaId).toBe('organizational-roles');
+      expect(assessment.capabilityAreaId).toBe('enterprise-governance');
+    });
+
+    it('should point all organizational assessments at the combined area', () => {
+      const ea = getOrganizationalAssessment('enterprise-architecture');
+      expect(ea.capabilityAreaId).toBe('enterprise-governance');
     });
   });
 

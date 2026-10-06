@@ -7,7 +7,11 @@
  */
 
 import orbitData from '../data/orbit-model.json';
-import { DOMAIN_AGGREGATE_DIMENSIONS, ENTERPRISE_DOMAIN_IDS } from '../constants';
+import {
+  DOMAIN_AGGREGATE_DIMENSIONS,
+  ENTERPRISE_DOMAIN_IDS,
+  isOrganizationalAssessmentArea,
+} from '../constants';
 import type {
   OrbitModel,
   OrbitDimension,
@@ -60,7 +64,8 @@ export function getRequiredDimensionIds(): OrbitDimensionId[] {
 /**
  * Get optional dimension IDs
  * @returns Empty array - all dimensions are now required for standard assessments
- * @deprecated Outcomes and Roles are now organizational assessments, not optional dimensions
+ * @deprecated All three standard dimensions are required. Outcomes, Roles, and
+ *             Enterprise Architecture are organizational assessments, not optional dimensions
  */
 export function getOptionalDimensionIds(): OrbitDimensionId[] {
   return [];
@@ -336,10 +341,11 @@ export function isEnterpriseDomain(domainId: string): boolean {
 
 /**
  * Get an organizational assessment definition by type.
- * Organizational assessments (Outcomes, Roles) are assessed at the organizational level,
- * not per capability area.
+ * Organizational assessments are assessed once for the whole organization rather
+ * than per capability area.
  *
- * @param type - The organizational assessment type ('outcomes' or 'roles')
+ * @param type - The organizational assessment section ('outcomes', 'roles', or
+ *               'enterprise-architecture')
  * @returns The organizational assessment definition
  */
 export function getOrganizationalAssessment(
@@ -351,7 +357,8 @@ export function getOrganizationalAssessment(
 /**
  * Get all aspects for an organizational assessment.
  *
- * @param type - The organizational assessment type ('outcomes' or 'roles')
+ * @param type - The organizational assessment section ('outcomes', 'roles', or
+ *               'enterprise-architecture')
  * @returns Array of aspects for the organizational assessment
  */
 export function getOrganizationalAspects(type: OrganizationalAssessmentId): OrbitAspect[] {
@@ -361,7 +368,8 @@ export function getOrganizationalAspects(type: OrganizationalAssessmentId): Orbi
 /**
  * Get the aspect count for an organizational assessment.
  *
- * @param type - The organizational assessment type ('outcomes' or 'roles')
+ * @param type - The organizational assessment section ('outcomes', 'roles', or
+ *               'enterprise-architecture')
  * @returns Number of aspects in the organizational assessment
  */
 export function getOrganizationalAspectCount(type: OrganizationalAssessmentId): number {
@@ -371,7 +379,8 @@ export function getOrganizationalAspectCount(type: OrganizationalAssessmentId): 
 /**
  * Get a specific aspect from an organizational assessment.
  *
- * @param type - The organizational assessment type ('outcomes' or 'roles')
+ * @param type - The organizational assessment section ('outcomes', 'roles', or
+ *               'enterprise-architecture')
  * @param aspectId - The aspect ID to find
  * @returns The aspect if found, undefined otherwise
  */
@@ -401,4 +410,30 @@ export function getTotalOrganizationalAspectCount(): number {
     (sum, type) => sum + getOrganizationalAspectCount(type),
     0
   );
+}
+
+/**
+ * Get the number of aspects a user can actually assess for a capability area.
+ * Used as the completion-percentage denominator.
+ *
+ * - Combined organizational area: all organizational aspects (15)
+ * - Areas in enterprise domains: standard aspects minus the aggregated
+ *   dimension's aspects (that dimension cannot be manually assessed)
+ * - All other areas: all standard aspects (26)
+ *
+ * @param areaId - The capability area ID
+ * @param domainId - The area's parent domain ID
+ * @returns Number of manually assessable aspects for the area
+ */
+export function getAssessableAspectCountForArea(areaId: string, domainId: string): number {
+  if (isOrganizationalAssessmentArea(areaId)) {
+    return getTotalOrganizationalAspectCount();
+  }
+
+  const aggregatedDimension = getAggregatedDimensionForDomain(domainId);
+  if (aggregatedDimension) {
+    return getTotalAspectCount() - getAspectCountForDimension(aggregatedDimension);
+  }
+
+  return getTotalAspectCount();
 }

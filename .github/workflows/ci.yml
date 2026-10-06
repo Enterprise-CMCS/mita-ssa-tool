@@ -18,9 +18,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        # 22.18 is the floor, not a preference: the XLSX workbook generator is a
+        # TypeScript file run directly by Node, which needs Node's native type
+        # stripping (unflagged from 22.18). On Node 20 it fails with an
+        # unknown-file-extension error. Kept in step with `.nvmrc` and the `engines`
+        # field in package.json.
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.18'
           cache: 'npm'
 
       - name: Install dependencies
@@ -38,7 +43,17 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build (verify it compiles)
+      # `prebuild` generates the workbook, so this step also proves the generator runs as a
+      # plain Node script under CI's runtime. That is not redundant with `npm test`: the suite
+      # imports the generator's modules through Vite's transform and builds a workbook in
+      # memory, so a failure of Node's native type stripping — the reason Node 22.18 is the
+      # floor — would not show up there.
+      - name: Build (verify it compiles, and generate the workbook)
         env:
           VITE_BASE_PATH: /test-build/
         run: npm run build
+
+      # The suite never reads a file off disk, so nothing above notices if the workbook failed
+      # to reach the built site. That failure mode is a 404 on the in-app download links.
+      - name: Verify the shipped workbook
+        run: npm run verify:workbook-artifact

@@ -15,7 +15,6 @@ describe('ActionMenu', () => {
     onResume: vi.fn(),
     onEdit: vi.fn(),
     onView: vi.fn(),
-    onExport: vi.fn(),
     onDelete: vi.fn(),
     onViewHistory: vi.fn(),
   };

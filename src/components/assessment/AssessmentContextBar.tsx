@@ -14,6 +14,7 @@ import {
   Paper,
   Popper,
   List,
+  ListItem,
   ListItemButton,
   ListItemText,
   ClickAwayListener,
@@ -32,14 +33,13 @@ import ErrorIcon from '@mui/icons-material/Error';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+import type { SaveStatus } from '../../hooks';
 
 interface AssessmentContextBarProps {
   domainName: string;
   areaName: string;
   areaDescription: string;
   areaTopics: string[];
-  categoryName?: string;
   tags: string[];
   tagSuggestions: string[];
   onTagAdd: (tag: string) => void;
@@ -57,7 +57,6 @@ export function AssessmentContextBar({
   areaName,
   areaDescription,
   areaTopics,
-  categoryName,
   tags,
   tagSuggestions,
   onTagAdd,
@@ -160,34 +159,26 @@ export function AssessmentContextBar({
           </IconButton>
         </Tooltip>
 
-        {/* Capability Area Name + Expand Toggle */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            '&:hover': { opacity: 0.8 },
-          }}
-          onClick={() => setExpanded(!expanded)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setExpanded(!expanded);
-            }
-          }}
-          aria-expanded={expanded}
-          aria-controls="capability-details"
-        >
+        {/* Capability Area Name + Expand Toggle.
+            The disclosure is a single real IconButton. It used to be a
+            `Box role="button" tabIndex={0}` wrapping this IconButton, with
+            `tabIndex={-1}` on the inner one to keep it out of the tab order — but
+            a negative tabindex does not stop assistive technology reaching a
+            nested control, which axe reports as `nested-interactive`. Making the
+            heading a child of the button instead is not an option either: a
+            heading may contain a button, not the reverse. So the button stands
+            alone, matching the pattern `DomainTable` already uses. */}
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
             {areaName}
           </Typography>
           <IconButton
             size="small"
             sx={{ ml: 0.5, color: 'text.secondary' }}
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            aria-controls="capability-details"
             aria-label={expanded ? 'Collapse capability details' : 'Expand capability details'}
-            tabIndex={-1}
           >
             {expanded ? (
               <ExpandLessIcon aria-hidden="true" />
@@ -246,16 +237,17 @@ export function AssessmentContextBar({
                   <Paper elevation={3} sx={{ mt: 0.5, minWidth: 150 }}>
                     <List dense disablePadding>
                       {filteredSuggestions.map((suggestion) => (
-                        <ListItemButton
-                          key={suggestion}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          sx={{ py: 0.5 }}
-                        >
-                          <ListItemText
-                            primary={suggestion}
-                            primaryTypographyProps={{ variant: 'body2' }}
-                          />
-                        </ListItemButton>
+                        <ListItem key={suggestion} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            sx={{ py: 0.5 }}
+                          >
+                            <ListItemText
+                              primary={suggestion}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
                       ))}
                     </List>
                   </Paper>
@@ -288,7 +280,10 @@ export function AssessmentContextBar({
             <Typography
               variant="caption"
               sx={{
-                color: 'text.disabled',
+                // Active instructional text, so the WCAG exception for inactive
+                // content does not apply. `text.disabled` resolves to #9e9e9e =
+                // 2.67:1; `text.secondary` is 6.69:1.
+                color: 'text.secondary',
                 fontStyle: 'italic',
               }}
             >
@@ -362,12 +357,20 @@ export function AssessmentContextBar({
             </>
           )}
           {saveStatus === 'error' && (
-            <>
+            // Only the failure is announced. Making the whole region live would
+            // read "Saving...", "Saved", then a timestamp on every autosave, which
+            // is unusable while typing notes. A save that did not land is the one
+            // state worth interrupting for, so it is assertive.
+            <Box
+              role="alert"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+              title="Your last change could not be saved"
+            >
               <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />
               <Typography variant="caption" color="error.main">
-                Error
+                Not saved
               </Typography>
-            </>
+            </Box>
           )}
         </Box>
       </Box>
@@ -386,29 +389,12 @@ export function AssessmentContextBar({
         >
           {/* Indent to align with capability name */}
           <Box sx={{ pl: 5 }}>
-            {/* Category badge if present */}
-            {categoryName && (
-              <Chip
-                label={categoryName}
-                size="small"
-                sx={{
-                  mt: 1.5,
-                  mb: 1,
-                  height: 22,
-                  fontSize: '0.75rem',
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  color: 'primary.dark',
-                  fontWeight: 500,
-                }}
-              />
-            )}
-
             {/* Description */}
             <Typography
               variant="body2"
               color="text.secondary"
               sx={{
-                mt: categoryName ? 0 : 1.5,
+                mt: 1.5,
                 mb: 1.5,
                 lineHeight: 1.6,
               }}

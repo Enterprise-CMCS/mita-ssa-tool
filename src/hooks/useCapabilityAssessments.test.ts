@@ -255,6 +255,125 @@ describe('useCapabilityAssessments', () => {
       expect(finalized?.overallScore).toBe(4.0); // Only the non-N/A rating
     });
 
+    /**
+     * Helper to build a minimal organizational rating for the combined area.
+     */
+    const orgRating = (
+      id: string,
+      dimensionId: 'outcomes' | 'roles' | 'enterprise-architecture',
+      aspectId: string,
+      currentLevel: number
+    ): Parameters<typeof db.orbitRatings.add>[0] => ({
+      id,
+      capabilityAssessmentId: 'org-combined',
+      dimensionId,
+      aspectId,
+      currentLevel: currentLevel as -1 | 0 | 1 | 2 | 3 | 4 | 5,
+      questionResponses: [],
+      evidenceResponses: [],
+      notes: '',
+      barriers: '',
+      plans: '',
+      carriedForward: false,
+      attachmentIds: [],
+      updatedAt: new Date(),
+    });
+
+    const createOrgAssessment = (): CapabilityAssessment =>
+      createAssessment({
+        id: 'org-combined',
+        capabilityDomainId: 'enterprise-architecture-domain',
+        capabilityDomainName: 'Enterprise Architecture',
+        capabilityAreaId: 'enterprise-governance',
+        capabilityAreaName: 'Enterprise Governance',
+        status: 'in_progress',
+      });
+
+    it('should score the combined organizational area as the average of section averages', async () => {
+      await db.capabilityAssessments.add(createOrgAssessment());
+
+      await db.orbitRatings.bulkAdd([
+        // Outcomes section: (3 + 5) / 2 = 4.0
+        orgRating('o1', 'outcomes', 'culture-mindset', 3),
+        orgRating('o2', 'outcomes', 'capability', 5),
+        // Roles section: 2.0
+        orgRating('ro1', 'roles', 'communication', 2),
+        // Enterprise Architecture section: (5 + 4) / 2 = 4.5
+        orgRating('ea1', 'enterprise-architecture', 'business-capability', 5),
+        orgRating('ea2', 'enterprise-architecture', 'policy-management', 4),
+      ]);
+
+      const { result } = renderHook(() => useCapabilityAssessments());
+
+      await waitFor(() => {
+        expect(result.current.assessments).toHaveLength(1);
+      });
+
+      await act(async () => {
+        await result.current.finalizeAssessment('org-combined');
+      });
+
+      const finalized = await db.capabilityAssessments.get('org-combined');
+      // (4.0 + 2.0 + 4.5) / 3 = 3.5
+      expect(finalized?.overallScore).toBe(3.5);
+    });
+
+    it('should exclude organizational sections with no assessed aspects', async () => {
+      await db.capabilityAssessments.add(createOrgAssessment());
+
+      await db.orbitRatings.bulkAdd([
+        // Only Outcomes assessed: (3 + 4) / 2 = 3.5; Roles and EA excluded
+        orgRating('o1', 'outcomes', 'culture-mindset', 3),
+        orgRating('o2', 'outcomes', 'capability', 4),
+        // N/A and unassessed ratings in other sections are excluded
+        orgRating('ro1', 'roles', 'communication', -1),
+        orgRating('ea1', 'enterprise-architecture', 'business-capability', 0),
+      ]);
+
+      const { result } = renderHook(() => useCapabilityAssessments());
+
+      await waitFor(() => {
+        expect(result.current.assessments).toHaveLength(1);
+      });
+
+      await act(async () => {
+        await result.current.finalizeAssessment('org-combined');
+      });
+
+      const finalized = await db.capabilityAssessments.get('org-combined');
+      expect(finalized?.overallScore).toBe(3.5);
+    });
+
+    it('should weight organizational sections equally regardless of aspect counts', async () => {
+      await db.capabilityAssessments.add(createOrgAssessment());
+
+      await db.orbitRatings.bulkAdd([
+        // Outcomes: six aspects all at 5 -> section average 5.0
+        orgRating('o1', 'outcomes', 'culture-mindset', 5),
+        orgRating('o2', 'outcomes', 'capability', 5),
+        orgRating('o3', 'outcomes', 'quality-consistency', 5),
+        orgRating('o4', 'outcomes', 'alignment-goals-priorities', 5),
+        orgRating('o5', 'outcomes', 'use-of-metrics', 5),
+        orgRating('o6', 'outcomes', 'reusability-integration', 5),
+        // Roles: one aspect at 2 -> section average 2.0
+        orgRating('ro1', 'roles', 'communication', 2),
+      ]);
+
+      const { result } = renderHook(() => useCapabilityAssessments());
+
+      await waitFor(() => {
+        expect(result.current.assessments).toHaveLength(1);
+      });
+
+      await act(async () => {
+        await result.current.finalizeAssessment('org-combined');
+      });
+
+      const finalized = await db.capabilityAssessments.get('org-combined');
+      // Section averages (5.0 + 2.0) / 2 = 3.5, NOT the flat mean of 7 ratings (~4.6)
+      expect(finalized?.overallScore).toBe(3.5);
+    });
+
     it('should throw error for non-existent assessment', async () => {
       const { result } = renderHook(() => useCapabilityAssessments());
 

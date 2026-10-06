@@ -18,6 +18,7 @@ import { createHistorySnapshot, calculateDimensionScores, toHistoricalRatings } 
 import { extractAttachmentIdFromFileName } from './exportService';
 import { isOrganizationalAssessmentArea, TIMESTAMP_TOLERANCE_MS } from '../../constants';
 import { getAspect, getOrganizationalAspect, getOrganizationalAssessmentTypes } from '../orbit';
+import { getAreaById } from '../capabilities';
 import type { ExportData, ImportResult, ImportItemResult, ImportProgressCallback } from './types';
 import type {
   CapabilityAssessment,
@@ -412,6 +413,13 @@ async function processImport(
 
   // Import history entries
   for (const historyEntry of data.data.history) {
+    // Skip history for capability areas that no longer exist in the current
+    // model - such entries would be permanently unreachable (history is only
+    // navigable from current-area rows)
+    if (!getAreaById(historyEntry.capabilityAreaId)) {
+      continue;
+    }
+
     const existing = await db.assessmentHistory.get(historyEntry.id);
     if (!existing) {
       // Filter out historical ratings whose aspect IDs no longer exist in the
@@ -445,6 +453,18 @@ async function processAssessmentImport(
   data: ExportData
 ): Promise<ImportItemResult> {
   const areaId = importedAssessment.capabilityAreaId;
+
+  // Skip assessments whose capability area no longer exists in the current
+  // model (e.g., areas removed or renamed by the v4 capability model update).
+  // Importing them would create records unreachable from any dashboard row.
+  if (!getAreaById(areaId)) {
+    return {
+      areaId,
+      areaName: importedAssessment.capabilityAreaName,
+      action: 'skipped',
+      reason: 'Capability area not in current model',
+    };
+  }
 
   // Check if this is an organizational assessment
   const isOrganizational = isOrganizationalAssessmentArea(areaId);

@@ -5,7 +5,7 @@
  * Tracks which items have been reviewed/confirmed.
  */
 
-import { JSX } from 'react';
+import { JSX, useId } from 'react';
 import {
   Box,
   Checkbox,
@@ -46,6 +46,18 @@ export function QuestionChecklist({
   levelName,
   disabled = false,
 }: QuestionChecklistProps): JSX.Element {
+  /**
+   * One of these renders per aspect, so the accordion ids must be per-instance.
+   * They were hardcoded (`evidence-header` / `evidence-content`), which produced
+   * five duplicate DOM ids on a five-aspect dimension and five MUI accordion
+   * regions whose `aria-labelledby` all resolved to the first header — reported
+   * by axe as `landmark-unique`, and only visible once panels are expanded.
+   *
+   * Declared before the early return below: hooks must run in the same order on
+   * every render.
+   */
+  const instanceId = useId().replace(/:/g, '');
+
   const hasQuestions = questions.length > 0;
   const hasEvidence = evidence.length > 0;
 
@@ -76,8 +88,8 @@ export function QuestionChecklist({
         <Accordion defaultExpanded={questions.length <= 4} disableGutters elevation={0}>
           <AccordionSummary
             expandIcon={<ExpandMoreIcon aria-hidden="true" />}
-            aria-controls="questions-content"
-            id="questions-header"
+            aria-controls={`questions-content-${instanceId}`}
+            id={`questions-header-${instanceId}`}
             sx={{
               bgcolor: 'grey.50',
               borderRadius: 1,
@@ -86,7 +98,10 @@ export function QuestionChecklist({
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <HelpOutlineIcon fontSize="small" color="primary" aria-hidden="true" />
-              <Typography variant="subtitle2">Assessment Questions for {levelName}</Typography>
+              {/* Inside MUI's <h3 class="MuiAccordion-heading">, so not a heading itself. */}
+              <Typography variant="subtitle2" component="span">
+                Assessment Questions for {levelName}
+              </Typography>
               <Chip
                 label={`${questionsAnswered}/${questions.length}`}
                 size="small"
@@ -134,8 +149,8 @@ export function QuestionChecklist({
         >
           <AccordionSummary
             expandIcon={<ExpandMoreIcon aria-hidden="true" />}
-            aria-controls="evidence-content"
-            id="evidence-header"
+            aria-controls={`evidence-content-${instanceId}`}
+            id={`evidence-header-${instanceId}`}
             sx={{
               bgcolor: 'grey.50',
               borderRadius: 1,
@@ -144,7 +159,10 @@ export function QuestionChecklist({
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <DescriptionOutlinedIcon fontSize="small" color="secondary" aria-hidden="true" />
-              <Typography variant="subtitle2">Evidence Items for {levelName}</Typography>
+              {/* Inside MUI's <h3 class="MuiAccordion-heading">, so not a heading itself. */}
+              <Typography variant="subtitle2" component="span">
+                Evidence Items for {levelName}
+              </Typography>
               <Chip
                 label={`${evidenceProvided}/${evidence.length}`}
                 size="small"

@@ -73,7 +73,9 @@ export function StackedProgressBar({
               #a5d6a7 4px,
               #a5d6a7 8px
             )`,
-            color: '#1b5e20',
+            // The striped fill alternates #81c784 / #a5d6a7, so the text has to
+            // clear the DARKER stripe: #1b5e20 measured only 3.91:1 against it.
+            color: '#0b3d13',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

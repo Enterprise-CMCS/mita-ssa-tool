@@ -6,7 +6,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DimensionScoresTable from './DimensionScoresTable';
-import type { DimensionScore, AspectScore, OrbitRating, Attachment } from '../../types';
+import { getOrganizationalAspect } from '../../services/orbit';
+import type {
+  DimensionScore,
+  AspectScore,
+  OrbitRating,
+  Attachment,
+  OrganizationalAssessmentId,
+} from '../../types';
 
 describe('DimensionScoresTable', () => {
   const mockOnDownloadAttachment = vi.fn();
@@ -252,5 +259,95 @@ describe('DimensionScoresTable', () => {
     );
 
     expect(screen.getByText('Business Architecture')).toBeInTheDocument();
+  });
+
+  /**
+   * Regression: OBS-1. The aspect-name lookup branched on a hand-written
+   * 'outcomes' | 'roles' union, so 'enterprise-architecture' ratings fell through
+   * to the standard-dimension lookup, resolved to undefined, and rendered raw
+   * kebab-case aspect IDs. All three organizational sections must resolve names.
+   */
+  describe('organizational aspect names (OBS-1)', () => {
+    const cases: Array<{
+      section: OrganizationalAssessmentId;
+      sectionName: string;
+      aspectId: string;
+      expectedName: string;
+    }> = [
+      {
+        section: 'outcomes',
+        sectionName: 'Organizational Outcomes',
+        aspectId: 'use-of-metrics',
+        expectedName: 'Use of Metrics',
+      },
+      {
+        section: 'roles',
+        sectionName: 'Organizational Roles',
+        aspectId: 'governance-standardization',
+        expectedName: 'Governance & Standardization',
+      },
+      {
+        section: 'enterprise-architecture',
+        sectionName: 'Organizational Enterprise Architecture',
+        aspectId: 'strategic-planning',
+        expectedName: 'Strategic Planning',
+      },
+    ];
+
+    it.each(cases)(
+      'resolves the aspect name for the $section section',
+      async ({ section, sectionName, aspectId, expectedName }) => {
+        // Sanity-check the fixture against the live ORBIT model so a model
+        // rename fails loudly here instead of silently weakening the test.
+        expect(getOrganizationalAspect(section, aspectId)?.name).toBe(expectedName);
+
+        const scores: DimensionScore[] = [
+          {
+            dimensionId: section,
+            dimensionName: sectionName,
+            required: true,
+            averageLevel: 3,
+            aspectScores: [
+              {
+                aspectId,
+                aspectName: expectedName,
+                dimensionId: section,
+                currentLevel: 3,
+                isAssessed: true,
+              },
+            ],
+          },
+        ];
+
+        const ratings: OrbitRating[] = [
+          {
+            id: `rating-${aspectId}`,
+            capabilityAssessmentId: 'assessment-1',
+            dimensionId: section,
+            aspectId,
+            currentLevel: 3,
+            questionResponses: [],
+            evidenceResponses: [],
+            notes: '',
+            barriers: '',
+            plans: '',
+            carriedForward: false,
+            attachmentIds: [],
+            updatedAt: new Date(),
+          },
+        ];
+
+        render(
+          <DimensionScoresTable dimensionScores={scores} {...defaultProps} ratings={ratings} />
+        );
+
+        // The expand affordance is the clickable row itself, not a button
+        // (see OBS-24 — it is not keyboard reachable).
+        await userEvent.click(screen.getByText(sectionName));
+
+        expect(screen.getByText(expectedName)).toBeInTheDocument();
+        expect(screen.queryByText(aspectId)).not.toBeInTheDocument();
+      }
+    );
   });
 });

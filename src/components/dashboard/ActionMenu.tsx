@@ -20,7 +20,6 @@ interface ActionMenuProps {
   onResume: () => void;
   onEdit: () => void;
   onView: () => void;
-  onExport: () => void;
   onDelete: () => void;
   onViewHistory: () => void;
 }
