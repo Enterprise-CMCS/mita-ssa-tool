@@ -1,7 +1,7 @@
 {
   "version": "4.0",
-  "lastUpdated": "2026-07-30",
-  "source": "MITA 4.0 Maturity Model - PRA Submission (May 2026)",
+  "lastUpdated": "2026-10-13",
+  "source": "MITA 4.0 Maturity Model - PRA Submission (May 2026), Information criteria rev. per TA Subgroup (Sept 2026)",
   "maturityLevels": {
     "level1": {
       "name": "Initial",
@@ -308,22 +308,22 @@
               "evidence": ["Physical Data Dictionary", "Data Handling Procedures"]
             },
             "level4": {
-              "description": "Data security, sensitivity and privacy classifications are tracked to the impacted policies, standards and information assets in a central metadata repository that is accessible to stakeholders to search, discover and identify impacts of data security, sensitivity and privacy classification modifications.\nThe SOPs have not been applied and regular assessments have not occurred.",
+              "description": "Data security, sensitivity and privacy classifications are tracked to the impacted policies, standards and information assets in a central metadata repository that is accessible to stakeholders to search, discover and identify impacts of data security, sensitivity and privacy classification modifications.\nThe Data security, sensitivity & Privacy SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
-                "Data Classification   Metadata Repository Screenshots",
-                "Data Classification  Metamodel",
-                "Data Classification   Metadata Repository Operating Model",
+                "Data Classification Metadata Repository Screenshots",
+                "Data security, sensitivity & privacy related SOP",
+                "Data Classification Metamodel",
+                "Data Classification Metadata Repository Operating Model",
                 "Data Classification Metadata Repository Change Workflow"
               ]
             },
             "level5": {
-              "description": "SMA has established and applied the impacted assets' Enterprise Data security, sensitivity & privacy:\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular SS-A assessments for Data security, sensitivity & privacy",
+              "description": "SMA has established and applied the impacted assets’ Enterprise Data security, sensitivity & privacy: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular SS-A assessments for Data security, sensitivity & privacy.",
               "questions": [],
               "evidence": [
                 "Data Security and Privacy Policy",
                 "Data security, sensitivity & privacy Process Diagram",
-                "Data security, sensitivity & privacy SOP",
                 "Data security, sensitivity & privacy Standard Documentation",
                 "Data security, sensitivity & privacy Metadata Requirements",
                 "Previous Data security, sensitivity & privacy MITA Maturity Profile"
@@ -342,7 +342,7 @@
               "evidence": ["N/A- none exists"]
             },
             "level2": {
-              "description": "Data quality rules have been developed and documented for the information asset and is accessible by stakeholders, but is not implemented or results tracked.",
+              "description": "Data quality rules have been developed and documented for the information asset and is accessible by stakeholders but is not implemented or results tracked.",
               "questions": [],
               "evidence": ["Data Rule Catalog", "Measure Catalog"]
             },
@@ -352,10 +352,11 @@
               "evidence": ["Data Quality Report", "Data Rule Catalog", "Measure Catalog"]
             },
             "level4": {
-              "description": "Data quality rules have been aligned to related T-MSIS rules, data anomalies and issues documented and tracked to the related information assets in a central repository. Data quality measures, standards and thresholds have been defined and included on data quality reports that are produced regularly.\nThe SOP have not been applied and regular assessments have not occurred.",
+              "description": "Data quality rules have been aligned to related Federal data rules (e.g., T-MSIS), data anomalies and issues documented and tracked to the related information assets in a central repository. Data quality measures, standards and thresholds have been defined and included on data quality reports that are produced regularly.\nThe Data Quality SOP has been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
-                "Data Rule Catalog connected to T-MSIS",
+                "Data Rule Catalog connected to Federal data rules",
+                "Data Quality related SOP",
                 "Data Quality Report",
                 "Data Quality Metadata Repository Screenshots",
                 "Data Quality Metamodel",
@@ -364,11 +365,10 @@
               ]
             },
             "level5": {
-              "description": "The quality of the information asset adheres to Enterprise Data Quality\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments for opportunities to improve the quality of the information asset.",
+              "description": "The quality of the information asset adheres to Enterprise Data Quality: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments for opportunities to improve the quality of the information asset.",
               "questions": [],
               "evidence": [
                 "Data Quality Process Diagram",
-                "Data Quality SOP",
                 "Data Quality Standard Documentation",
                 "Data Quality Metadata Requirements",
                 "Previous Data Quality MITA Maturity Profile"
@@ -406,10 +406,11 @@
               ]
             },
             "level4": {
-              "description": "The measure specifications, statistical models and other information assets are traced to the reports that use them in the central metadata repository. The SMA performs predictive analytics to predict future outcomes through the evaluation of probability estimates to inform decision-making for the capability.\nThe SOPs have not been applied and regular assessments of the reports have not occurred.",
+              "description": "The measure specifications, statistical models and other information assets are traced to the reports that use them in the central metadata repository. The SMA performs predictive analytics to predict future outcomes through the evaluation of probability estimates to inform decision-making for the capability.\nThe SOPs have been applied and regular assessments of the reports have occurred.",
               "questions": [],
               "evidence": [
                 "Report/Measure Metadata Repository Screenshots",
+                "Business Intelligence & Data Science related SOP",
                 "Report/Measure Metamodel",
                 "Metadata Repository Operating Model",
                 "Report/Measure Metadata Repository Change Workflow",
@@ -418,11 +419,10 @@
               ]
             },
             "level5": {
-              "description": "The measures and the analysis performed to support the capability adhere to enterprise business intelligence\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the measures and analysis. The SMA performs prescriptive analytics to define actions that will affect outcomes, rather than just predicting the outcomes from actions that have occurred to inform decision-making for the capability.",
+              "description": "The measures and the analysis performed to support the capability adhere to enterprise business intelligence: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the measures and analysis. The SMA performs prescriptive analytics to define actions that will affect outcomes, rather than just predicting the outcomes from actions that have occurred to inform decision-making for the capability.",
               "questions": [],
               "evidence": [
                 "Business Intelligence & Data Science Process Diagram",
-                "Business Intelligence & Data Science SOP",
                 "Business Intelligence & Data Science Standard Documentation",
                 "Business Intelligence & Data Science Metadata Requirements",
                 "Previous Business Intelligence & Data Science MITA Maturity Profile",
@@ -448,15 +448,16 @@
               "evidence": ["Data Catalog", "Data Flow Model"]
             },
             "level3": {
-              "description": "Structure data standards that meet the business needs have been identified for every exchange of information that supports this capability and are traced to the applicable information asset. The detailed transformation logic and related metadata are not being captured in a central repository.",
+              "description": "Structured data standards that meet the business needs have been identified for every exchange of information that supports this capability and are traced to the applicable information asset. The detailed transformation logic and related metadata are not being captured in a central repository.",
               "questions": [],
               "evidence": ["Data Catalog with Standards", "Data Standard Documentation"]
             },
             "level4": {
-              "description": "Detailed documentation about how data moves across the enterprise, including detailed transformation logic, has been documented, is traced to the applicable information assets maintained in a central metadata repository that is accessible to stakeholders to search, discover and identify impacts of data exchange modifications. However, the SOPs have not been applied and regular assessments have not occurred.",
+              "description": "Detailed documentation about how data moves across the enterprise and with trading partners, including detailed transformation logic, has been documented, is traced to the applicable information assets maintained in a central metadata repository that is accessible to stakeholders to search, discover and identify impacts of data exchange modifications.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "Data Lineage Diagram",
+                "Data Integration and Interoperability related SOP",
                 "Data exchange Map Specification",
                 "Data exchange Metadata Repository Screenshots",
                 "Data exchange Metamodel",
@@ -465,11 +466,10 @@
               ]
             },
             "level5": {
-              "description": "All information exchanges that support this capability align to enterprise data integration and interoperability\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the exchange of information.",
+              "description": "All information exchanges that support this capability align to enterprise data integration and interoperability: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the exchange of information.",
               "questions": [],
               "evidence": [
                 "Data Integration and Interoperability Process Diagram",
-                "Data Integration and Interoperability SOP",
                 "Data Integration and Interoperability Standard Documentation",
                 "Data Integration and Interoperability Metadata Requirements",
                 "Previous Data Integration and Interoperability MITA Maturity Profile"
@@ -501,21 +501,20 @@
               ]
             },
             "level4": {
-              "description": "The unstructured data that supports this capability adheres to enterprise unstructured data standards and is organized, controlled and categorized so that it can be stored, published, discovered and easily accessed by stakeholders.\nThe SOPs have not been applied and regular assessments have not occurred.",
+              "description": "The unstructured data that supports this capability adheres to enterprise unstructured data standards and is organized, controlled and categorized so that it can be stored, published, discovered and easily accessed by stakeholders.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "Document and Content Management Process Diagram",
-                "Document and Content Management SOP",
+                "Document and Content Management related SOP",
                 "Document and Content Management Standard Documentation",
                 "Document and Content Management Metadata Requirements"
               ]
             },
             "level5": {
-              "description": "The unstructured data that supports this capability adheres to Enterprise document and content\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the unstructured data.",
+              "description": "The unstructured data that supports this capability adheres to Enterprise document and content: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the unstructured data.",
               "questions": [],
               "evidence": [
                 "Document and Content Management Process Diagram",
-                "Document and Content Management SOP",
                 "Document and Content Management Standard Documentation",
                 "Document and Content Management Metadata Requirements",
                 "Document and Content Management MITA Scorecard"
@@ -548,20 +547,20 @@
               ]
             },
             "level4": {
-              "description": "The business terms, acronyms and information asset data governance role assignments are stored in a central metadata repository and is accessible to stakeholders to search and discover the information assets that are governed by the SMA.\nThe SOP have not been applied and regular assessments have not occurred.",
+              "description": "The business terms, acronyms and information asset data governance role assignments are stored in a central metadata repository and is accessible to stakeholders to search and discover the information assets that are governed by the SMA.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "Business Glossary Metadata Repository Screenshots",
+                "Data Governance related SOP",
                 "Business Glossary Metamodel",
                 "Business Glossary Metadata Repository Operating Model"
               ]
             },
             "level5": {
-              "description": "Information assets adhere to the enterprise data governance:\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the governance of the information asset.",
+              "description": "Information assets adhere to the enterprise data governance: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the governance of the information asset.",
               "questions": [],
               "evidence": [
                 "Data Governance Process Diagram",
-                "Data Governance SOP",
                 "Data Governance Standard Documentation",
                 "Data Governance Metadata Requirements",
                 "Data Governance MITA Scorecard"
@@ -599,21 +598,21 @@
               ]
             },
             "level4": {
-              "description": "Mappings of Enterprise Information Reference Models to physical data design documentation are maintained in a central enterprise metadata repository that is accessible to stakeholders to search, discover and identify impacts of data design modifications.\nThe SOP have not been applied and regular assessments have not occurred.",
+              "description": "Mappings of Enterprise Information Reference Models to physical data design documentation are maintained in a central enterprise metadata repository that is accessible to stakeholders to search, discover and identify impacts of data design modifications.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "Data Design Metadata Repository Screenshots",
+                "Data Architecture, Modeling & Design related SOP",
                 "Data Design Metamodel",
                 "Data Design Metadata Repository Operating Model",
                 "Data Design Metadata Repository Change Workflow"
               ]
             },
             "level5": {
-              "description": "The design of the information asset adheres to Enterprise Data Architecture & Modeling:\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the unstructured data.",
+              "description": "The design of the information asset adheres to Enterprise Data Architecture & Modeling: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the unstructured data.",
               "questions": [],
               "evidence": [
                 "Data Architecture, Modeling & Design Process Diagram",
-                "Data Architecture, Modeling & Design SOP",
                 "Data Architecture, Modeling & Design Standard Documentation",
                 "Data Architecture, Modeling & Design Metadata Requirements",
                 "Data Architecture, Modeling & Design MITA Scorecard"
@@ -646,21 +645,21 @@
               ]
             },
             "level4": {
-              "description": "Reference data adheres to reference data metadata standards and is traced to the applicable data elements in the data dictionary in a central metadata repository that is accessible to stakeholders to search, discover and identify the impact of reference data modifications.\nThe SOPs have not been applied and regular assessments have not occurred.",
+              "description": "Reference data adheres to reference data metadata standards and is traced to the applicable data elements in the data dictionary in a central metadata repository that is accessible to stakeholders to search, discover and identify the impact of reference data modifications.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "Reference Data Metadata Repository Screenshots",
+                "Reference Data Management related SOP",
                 "Reference Data Metamodel",
                 "Reference Data Metadata Repository Operating Model",
                 "Reference Data Metadata Repository Change Workflow"
               ]
             },
             "level5": {
-              "description": "The reference data used to support the information asset adheres to Enterprise Reference Data:\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the management of reference data for the information asset.",
+              "description": "The reference data used to support the information asset adheres to Enterprise Reference Data: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the management of reference data for the information asset.",
               "questions": [],
               "evidence": [
                 "Reference Data Management Process Diagram",
-                "Reference Data Management SOP",
                 "Reference Data Management Standard Documentation",
                 "Reference Data Management Metadata Requirements",
                 "Reference Data Management MITA Scorecard"
@@ -689,21 +688,21 @@
               "evidence": ["MDM Match Report"]
             },
             "level4": {
-              "description": "Master data rules are traced to the related information asset in a central metadata repository that is accessible to stakeholders to search, discover and identify the impact of master data rule modifications.\nThe SOPs have not been applied and regular assessments have not occurred.",
+              "description": "Master data rules are traced to the related information asset in a central metadata repository that is accessible to stakeholders to search, discover and identify the impact of master data rule modifications.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "MDM Metadata Repository Screenshots",
+                "MDM related SOP",
                 "MDM Metamodel",
                 "MDM Metadata Repository Operating Model",
                 "MDM Metadata Repository Change Workflow"
               ]
             },
             "level5": {
-              "description": "The master data used to support the information asset adheres to Enterprise Master Management:\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the management of master data for the information asset.",
+              "description": "The master data used to support the information asset adheres to Enterprise Master Management: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the management of master data for the information asset.",
               "questions": [],
               "evidence": [
                 "MDM Process Diagram",
-                "MDM SOP",
                 "MDM Standard Documentation",
                 "MDM Metadata Requirements",
                 "Previous MDM MITA Maturity Profile"
@@ -732,10 +731,11 @@
               "evidence": ["Physical Data Dictionary", "Data Asset Catalog"]
             },
             "level4": {
-              "description": "The information assets have defined policies for data retention and access that define how long the information must be retained and the roles that have access to the information. The metadata about data storage and policies are stored in a central metadata repository that is accessible to stakeholders to search, discover and identify impacts of data storage modifications.\nThe SOP have not been applied and regular assessments have not occurred.",
+              "description": "The information assets have defined policies for data retention and access that define how long the information must be retained and the roles that have access to the information. The metadata about data storage and policies are stored in a central metadata repository that is accessible to stakeholders to search, discover and identify impacts of data storage modifications.\nThe SOPs have been applied and regular assessments have occurred.",
               "questions": [],
               "evidence": [
                 "Data Retention Policy",
+                "Data Storage & Warehousing related SOP",
                 "Data Access Policy",
                 "Data Storage Metadata Repository Screenshots",
                 "Data Storage Metamodel",
@@ -744,11 +744,10 @@
               ]
             },
             "level5": {
-              "description": "The information assets used to support this capability adhere to enterprise data storage & warehousing:\nOutcomes & Metrics\nProcesses & procedures\nPolicies & Standards\nMetadata requirements\nTechnology\nSMA performs regular assessments to improve the quality of the information asset.",
+              "description": "The information assets used to support this capability adhere to enterprise data storage & warehousing: applications & technical components; State defined Outcomes & Metrics; Business Processes & Procedures; and Metadata Requirements.\nSMA performs regular assessments to improve the quality of the information asset.",
               "questions": [],
               "evidence": [
                 "Data Storage & Warehousing Process Diagram",
-                "Data Storage & Warehousing SOP",
                 "Data Storage & Warehousing Standard Documentation",
                 "Data Storage & Warehousing Metadata Requirements",
                 "Previous Data Storage & Warehousing MITA Maturity Profile"
