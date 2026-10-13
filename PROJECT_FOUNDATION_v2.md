@@ -471,7 +471,7 @@ limits" below.
 | `scripts/generate-xlsx-workbook.ts`   | Entry point. `npm run generate:workbook`                         |
 | `scripts/xlsx/model.ts`               | Reads `capabilities.json` / `orbit-model.json`                   |
 | `scripts/xlsx/rows.ts`                | Row builders for the reference and input sheets                  |
-| `scripts/xlsx/profile-rows.ts`        | Row builders for the four calculated sheets                      |
+| `scripts/xlsx/profile-rows.ts`        | Row builders for the five calculated sheets                      |
 | `scripts/xlsx/scoring-spec.ts`        | The scoring rules, as JS functions **and** as Excel formula text |
 | `scripts/xlsx/workbook.ts`            | Sheet assembly, styling, protection, 508 treatment               |
 | `scripts/verify-workbook-in-excel.ts` | Arithmetic verification by driving Excel (macOS + Excel only)    |
@@ -482,18 +482,19 @@ devDependency. Nothing here reaches the browser bundle.
 
 ### Sheets
 
-| Sheet                         | Rows  | Contents                                                    |
-| ----------------------------- | ----- | ----------------------------------------------------------- |
-| `00_README`                   | —     | Guidance, scoring rules, known differences from the tool    |
-| `01_Maturity_Levels`          | 6     | Level definitions                                           |
-| `02_Capability_Reference`     | 72    | Every capability area                                       |
-| `03_ORBIT_Criteria_Reference` | 205   | Maturity criteria per aspect and level                      |
-| `04_Assessment_Input`         | 1,625 | One row per assessable aspect. **State enters levels here** |
-| `05_Organizational_Input`     | 15    | Enterprise Governance aspects                               |
-| `06_Maturity_Profile`         | 216   | Per area and dimension: score, count, text roll-ups         |
-| `07_Area_Scores`              | 72    | Per capability area, with completion %                      |
-| `08_Domain_Scores`            | 15    | 14 domains plus an overall row                              |
-| `09_Dimension_Scores`         | 3     | Enterprise-wide ORBIT figure                                |
+| Sheet                         | Rows  | Contents                                                                     |
+| ----------------------------- | ----- | ---------------------------------------------------------------------------- |
+| `00_README`                   | —     | Guidance, scoring rules, known differences from the tool                     |
+| `01_Maturity_Levels`          | 6     | Level definitions                                                            |
+| `02_Capability_Reference`     | 72    | Every capability area                                                        |
+| `03_ORBIT_Criteria_Reference` | 205   | Maturity criteria per aspect and level                                       |
+| `04_Assessment_Input`         | 1,625 | One row per assessable aspect. **State enters levels here**                  |
+| `05_Organizational_Input`     | 15    | Enterprise Governance aspects                                                |
+| `06_Maturity_Profile`         | 216   | Per area and dimension: As-Is/To-Be score, text roll-ups                     |
+| `07_Area_Scores`              | 72    | Per capability area, with completion %                                       |
+| `08_Domain_Scores`            | 15    | 14 domains plus an overall row                                               |
+| `09_Dimension_Scores`         | 3     | Enterprise-wide ORBIT figure                                                 |
+| `10_Calculations`             | 216   | Intermediate figures `06`, `07` and `09` read (unrounded means, counts, IDs) |
 
 ### Scoring parity, and its limits
 

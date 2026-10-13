@@ -5,11 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.2.0] - 2026-10-13
 
-Dependency and tooling work only. **Nothing about the shipped application changed** — no version
-bump, because no byte a user receives is different. Recorded because the security posture is the
-part a reviewer asks about.
+Applies the first round of pilot stakeholder feedback on the maturity criteria and the offline
+workbook, gathered in a working session with the subject-matter reviewers. Two changes a state sees,
+plus the dependency and tooling work that had accumulated on this branch and now ships with them.
+
+A MINOR release: the Information criteria are corrected and the workbook reads more cleanly, but
+nothing about how a score is calculated changed, no stored-data format changed, and an assessment
+saved under 4.1.x opens unchanged. Note that the Information Level 4 and Level 5 _criteria text_ did
+change (below), so a state revisiting an Information aspect it rated earlier will see different level
+wording than when it chose its rating.
+
+### Changed
+
+- **The Information dimension's maturity criteria now read as prose.** All 10 Information aspects had
+  their Level 4 and Level 5 descriptions reflowed from run-on fragments — an ingestion artifact that
+  had flattened the source's bullet lists into one long line — into readable sentences, matching the
+  reviewer's corrected source
+- **The Information Level 4 and Level 5 criteria themselves changed, not only their wording**, taken
+  from the reviewer's source across all 10 aspects — verbatim except for one approved consistency
+  fix, noted below:
+  - the "related SOP" criterion moved from Level 5 up to Level 4, and Level 4 now states
+    affirmatively that the SOPs have been applied rather than that they have not — correcting where
+    the standard-operating-procedure expectation sits on the maturity ladder
+  - Level 5 dropped the "Policies & Standards" item and now names "applications & technical
+    components" where it previously said "Technology"
+  - Information Exchange's Level 4 widened from information moving "across the enterprise" to "across
+    the enterprise and with trading partners"
+  - one deliberate departure from the source: Information Classification's Level 5 now reads "State
+    defined Outcomes & Metrics" to match the other nine aspects, correcting a source inconsistency
+    where it alone said "Outcomes & Metrics"
+- **Data Quality now refers to "Federal data rules (e.g., T-MSIS)"** rather than naming T-MSIS alone,
+  so the criterion is not read as T-MSIS being the only applicable rule
+- **Two smaller Information typo and punctuation fixes from the reviewer's source:** Information
+  Exchange's Level 3 now reads "Structured data standards" (was "Structure data standards"), and
+  Information Quality's Level 2 drops a stray comma before "but is not implemented"
+- **The offline workbook's `06_Maturity_Profile` sheet now shows only what a reviewer reads** — the
+  capability domain, area and dimension, the score source, As-Is and To-Be scores, and notes, barriers
+  and advancement plans. Ten columns that used to crowd it moved to a new `10_Calculations` sheet at
+  the end: the aspects-assessed counts, the As-Is and To-Be unrounded means, the four Technology
+  sub-dimension means, and the three ID columns (Domain ID, Capability Area ID, Dimension ID). None of
+  those are decoration — the arithmetic columns are live inputs the score formulas consume, and the ID
+  columns are the criteria ranges the enterprise-wide and aggregate roll-ups filter on — so they were
+  relocated rather than removed, and every score still computes identically. The two sheets are aligned
+  row for row and the scores read both by row number, so neither may be reordered; the workbook's own
+  README says so and sheet protection enforces it. Verified in real Excel
+- `@types/uuid` removed. uuid ships its own types, so the DefinitelyTyped stub was redundant
+- **`exceljs` is pinned to `uuid@^11.1.1` via an `overrides` entry, and that pin must not be
+  widened.** uuid dropped CommonJS support at v12, and `exceljs` requires uuid through CJS, so
+  matching it to the top-level `^14.0.0` breaks workbook generation with `ERR_REQUIRE_ESM`. uuid
+  11.1.1 is itself the patched release, so this is a compatibility pin rather than a deferred
+  upgrade
+- Eight dead barrel re-exports removed from `src/hooks/index.ts` and `src/utils/index.ts`, surfaced
+  by knip 6. Every symbol involved is still in use — each is imported directly from its source
+  module, which is the documented convention — so only the unreachable re-export lines went
 
 ### Security
 
@@ -24,18 +74,6 @@ part a reviewer asks about.
   session. Worth noting that an audit result is a snapshot, not a standing fact
 - `knip` 5 → 6 and `lint-staged` 15 → 16, clearing `fast-glob`, `braces` and `micromatch`
   advisories. Both are build-time only and neither ships
-
-### Changed
-
-- `@types/uuid` removed. uuid ships its own types, so the DefinitelyTyped stub was redundant
-- **`exceljs` is pinned to `uuid@^11.1.1` via an `overrides` entry, and that pin must not be
-  widened.** uuid dropped CommonJS support at v12, and `exceljs` requires uuid through CJS, so
-  matching it to the top-level `^14.0.0` breaks workbook generation with `ERR_REQUIRE_ESM`. uuid
-  11.1.1 is itself the patched release, so this is a compatibility pin rather than a deferred
-  upgrade
-- Eight dead barrel re-exports removed from `src/hooks/index.ts` and `src/utils/index.ts`, surfaced
-  by knip 6. Every symbol involved is still in use — each is imported directly from its source
-  module, which is the documented convention — so only the unreachable re-export lines went
 
 ## [4.1.1] - 2026-09-22
 

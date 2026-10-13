@@ -42,6 +42,7 @@ import ExcelJS from 'exceljs';
 import {
   ASSESSMENT_INPUT_COLUMNS,
   AREA_SCORES_COLUMNS,
+  CALCULATIONS_COLUMNS,
   DIMENSION_SCORES_COLUMNS,
   DOMAIN_SCORES_COLUMNS,
   FIRST_DATA_ROW,
@@ -69,6 +70,7 @@ import { buildAssessmentInputRows, buildOrganizationalInputRows } from './xlsx/r
 import {
   completionPercentage,
   letterOf,
+  meanOfAssessed,
   organizationalAreaScore,
   plainDimensionScore,
   standardAreaScore,
@@ -252,6 +254,8 @@ const targetCell = (row: number): CellRef =>
   cellOn(SHEET_NAMES.ASSESSMENT_INPUT, ASSESSMENT_INPUT_COLUMNS, 'targetLevel', row);
 const organizationalLevelCell = (row: number): CellRef =>
   cellOn(SHEET_NAMES.ORGANIZATIONAL_INPUT, ORGANIZATIONAL_INPUT_COLUMNS, 'currentLevel', row);
+const organizationalTargetCell = (row: number): CellRef =>
+  cellOn(SHEET_NAMES.ORGANIZATIONAL_INPUT, ORGANIZATIONAL_INPUT_COLUMNS, 'targetLevel', row);
 const profileScoreCell = (areaId: string, dimensionId: string): CellRef =>
   cellOn(
     SHEET_NAMES.MATURITY_PROFILE,
@@ -261,12 +265,47 @@ const profileScoreCell = (areaId: string, dimensionId: string): CellRef =>
   );
 const areaScoreCell = (areaId: string, key = 'currentScore'): CellRef =>
   cellOn(SHEET_NAMES.AREA_SCORES, AREA_SCORES_COLUMNS, key, indexOfAreaRow(areaId));
+/**
+ * A cell on `10_Calculations` for one area/dimension. The sheet shares row numbers with
+ * `06_Maturity_Profile`, so the profile row index addresses it directly. Used to read the
+ * relocated intermediate values — unrounded means and the Technology sub-dimension means —
+ * so a wrong or blank helper is caught at the cell rather than only through a downstream score.
+ */
+const calcCell = (areaId: string, dimensionId: string, key: string): CellRef =>
+  cellOn(SHEET_NAMES.CALCULATIONS, CALCULATIONS_COLUMNS, key, profileRowFor(areaId, dimensionId));
 
 /**
  * Seed a run of level cells with a repeating pattern, and report the levels used so the
  * expectation is computed from the same list Excel received.
  */
 function seedLevels(
+  rows: readonly number[],
+  pattern: readonly CellLevel[]
+): {
+  seeds: Seed[];
+  levels: CellLevel[];
+} {
+  return seedCells(levelCell, rows, pattern);
+}
+
+/**
+ * The To-Be counterpart of `seedLevels`: seeds the target-level column instead of the As-Is
+ * column, so a scenario can exercise the relocated To-Be helpers (`infrastructureTarget`,
+ * `applicationTarget`, organizational `targetUnrounded`).
+ */
+function seedTargetLevels(
+  rows: readonly number[],
+  pattern: readonly CellLevel[]
+): {
+  seeds: Seed[];
+  levels: CellLevel[];
+} {
+  return seedCells(targetCell, rows, pattern);
+}
+
+/** Shared body of `seedLevels`/`seedTargetLevels`: fill a run of cells from a repeating pattern. */
+function seedCells(
+  cellFor: (row: number) => CellRef,
   rows: readonly number[],
   pattern: readonly CellLevel[]
 ): {
@@ -281,7 +320,7 @@ function seedLevels(
       levels.push('');
       continue;
     }
-    seeds.push({ cell: levelCell(row), value });
+    seeds.push({ cell: cellFor(row), value });
     levels.push(value);
   }
   return { seeds, levels };
@@ -423,6 +462,24 @@ function buildScenarios(): Scenario[] {
           expected: expectNumber(techScore),
         },
         {
+          // Read the relocated helpers directly on 10_Calculations, not only through the score
+          // above. A sub-dimension mean that is blank or wrong but happens to leave the rounded
+          // score coincidentally right would pass the score check and fail here.
+          label: 'Infrastructure sub-dimension mean cell (As-Is), unrounded on 10_Calculations',
+          cell: calcCell(areaA, 'technology', 'infrastructureCurrent'),
+          expected: expectNumber(meanOfAssessed(infra.levels)),
+        },
+        {
+          label: 'Application sub-dimension mean cell (As-Is), unrounded on 10_Calculations',
+          cell: calcCell(areaA, 'technology', 'applicationCurrent'),
+          expected: expectNumber(meanOfAssessed(app.levels)),
+        },
+        {
+          label: 'Information unrounded mean cell (As-Is) on 10_Calculations',
+          cell: calcCell(areaA, 'information', 'currentUnrounded'),
+          expected: expectNumber(meanOfAssessed(info.levels)),
+        },
+        {
           label: 'area score, three dimensions',
           cell: areaScoreCell(areaA),
           expected: expectNumber(areaAScore),
@@ -502,12 +559,29 @@ function buildScenarios(): Scenario[] {
       applicationManagement: [],
     });
 
+    // To-Be levels for BOTH sub-dimensions, so this also drives the relocated Technology target
+    // helpers (`infrastructureTarget`, `applicationTarget`) and the To-Be Technology score — the
+    // target half of the sub-dimension-mean machinery, which no scenario evaluated before.
+    const infraTarget = seedTargetLevels(
+      inputRowsFor(areaId, 'technology', 'technologyInfrastructureManagement'),
+      [5, 5, 5, 5]
+    );
+    const appTarget = seedTargetLevels(
+      inputRowsFor(areaId, 'technology', 'applicationManagement'),
+      [4, 3]
+    );
+    const expectedTarget = technologyDimensionScore({
+      technologyInfrastructureManagement: infraTarget.levels,
+      applicationManagement: appTarget.levels,
+    });
+
     scenarios.push({
       name: 'Technology with Application Management left blank',
       rationale:
         'Proves the empty sub-dimension is dropped rather than erroring — the reason the two ' +
-        'sub-dimension means are written into their own cells instead of being inlined.',
-      seeds: infra.seeds,
+        'sub-dimension means are written into their own cells instead of being inlined. The To-Be ' +
+        'seeds additionally exercise the relocated target sub-dimension mean cells.',
+      seeds: [...infra.seeds, ...infraTarget.seeds, ...appTarget.seeds],
       expectations: [
         {
           label: 'Technology score equals the Infrastructure mean alone',
@@ -518,6 +592,26 @@ function buildScenarios(): Scenario[] {
           label: 'area score with Technology only',
           cell: areaScoreCell(areaId),
           expected: expectNumber(standardAreaScore([null, null, expected])),
+        },
+        {
+          label: 'Infrastructure To-Be sub-dimension mean cell, unrounded on 10_Calculations',
+          cell: calcCell(areaId, 'technology', 'infrastructureTarget'),
+          expected: expectNumber(meanOfAssessed(infraTarget.levels)),
+        },
+        {
+          label: 'Application To-Be sub-dimension mean cell, unrounded on 10_Calculations',
+          cell: calcCell(areaId, 'technology', 'applicationTarget'),
+          expected: expectNumber(meanOfAssessed(appTarget.levels)),
+        },
+        {
+          label: 'Technology To-Be score, mean of the two target sub-dimension means',
+          cell: cellOn(
+            SHEET_NAMES.MATURITY_PROFILE,
+            MATURITY_PROFILE_COLUMNS,
+            'targetScore',
+            profileRowFor(areaId, 'technology')
+          ),
+          expected: expectNumber(expectedTarget),
         },
       ],
     });
@@ -563,8 +657,8 @@ function buildScenarios(): Scenario[] {
         {
           label: 'aspects assessed counts the N/A',
           cell: cellOn(
-            SHEET_NAMES.MATURITY_PROFILE,
-            MATURITY_PROFILE_COLUMNS,
+            SHEET_NAMES.CALCULATIONS,
+            CALCULATIONS_COLUMNS,
             'aspectsAssessed',
             profileRowFor(areaId, 'businessArchitecture')
           ),
@@ -626,8 +720,8 @@ function buildScenarios(): Scenario[] {
         {
           label: 'aggregate contributes 0 assessed aspects',
           cell: cellOn(
-            SHEET_NAMES.MATURITY_PROFILE,
-            MATURITY_PROFILE_COLUMNS,
+            SHEET_NAMES.CALCULATIONS,
+            CALCULATIONS_COLUMNS,
             'aspectsAssessed',
             profileRowFor(enterpriseArea, 'information')
           ),
@@ -702,6 +796,14 @@ function buildScenarios(): Scenario[] {
     const levelsA = distributeToSum(rowsA.length, 8);
     const levelsB = distributeToSum(rowsB.length, 23);
 
+    // To-Be levels for the same two sections, chosen distinct from the As-Is levels so a
+    // crossed As-Is/To-Be reference would show up as a wrong number. These exercise the relocated
+    // `targetUnrounded` column on 10_Calculations and the organizational To-Be area score, which
+    // no scenario reached before — the single prior To-Be check used a plain Information dimension
+    // that computes straight off the input sheet and never touches a relocated target helper.
+    const targetLevelsA = distributeToSum(rowsA.length, 14);
+    const targetLevelsB = distributeToSum(rowsB.length, 19);
+
     const seeds: Seed[] = [
       ...rowsA.map((row, index) => ({
         cell: organizationalLevelCell(row),
@@ -710,6 +812,14 @@ function buildScenarios(): Scenario[] {
       ...rowsB.map((row, index) => ({
         cell: organizationalLevelCell(row),
         value: levelsB[index] as number,
+      })),
+      ...rowsA.map((row, index) => ({
+        cell: organizationalTargetCell(row),
+        value: targetLevelsA[index] as number,
+      })),
+      ...rowsB.map((row, index) => ({
+        cell: organizationalTargetCell(row),
+        value: targetLevelsB[index] as number,
       })),
     ];
 
@@ -725,6 +835,8 @@ function buildScenarios(): Scenario[] {
       );
     }
 
+    const targetUnroundedAnswer = organizationalAreaScore([targetLevelsA, targetLevelsB]);
+
     scenarios.push({
       name: 'the organizational area, averaging unrounded section means',
       rationale:
@@ -739,6 +851,24 @@ function buildScenarios(): Scenario[] {
             `not ${String(roundedFirstAnswer)} from the rounded one`,
           cell: areaScoreCell(ORGANIZATIONAL_ASSESSMENT_AREA_ID),
           expected: expectNumber(unroundedAnswer),
+        },
+        {
+          // Direct read of the relocated As-Is unrounded section mean for the first section.
+          label: 'first section As-Is unrounded mean cell on 10_Calculations',
+          cell: calcCell(ORGANIZATIONAL_ASSESSMENT_AREA_ID, sectionA, 'currentUnrounded'),
+          expected: expectNumber(meanOfAssessed(levelsA)),
+        },
+        {
+          // Direct read of the relocated To-Be unrounded section mean — a column no prior
+          // scenario evaluated.
+          label: 'first section To-Be unrounded mean cell on 10_Calculations',
+          cell: calcCell(ORGANIZATIONAL_ASSESSMENT_AREA_ID, sectionA, 'targetUnrounded'),
+          expected: expectNumber(meanOfAssessed(targetLevelsA)),
+        },
+        {
+          label: 'organizational To-Be area score, averaging unrounded target section means',
+          cell: areaScoreCell(ORGANIZATIONAL_ASSESSMENT_AREA_ID, 'targetScore'),
+          expected: expectNumber(targetUnroundedAnswer),
         },
       ],
     });

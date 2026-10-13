@@ -39,6 +39,7 @@ export const SHEET_NAMES = {
   AREA_SCORES: '07_Area_Scores',
   DOMAIN_SCORES: '08_Domain_Scores',
   DIMENSION_SCORES: '09_Dimension_Scores',
+  CALCULATIONS: '10_Calculations',
 } as const;
 
 /**
@@ -71,8 +72,8 @@ export const SHEET_DESCRIPTIONS: Readonly<Record<string, string>> = {
   [SHEET_NAMES.ORGANIZATIONAL_INPUT]:
     'Enter your As-Is and To-Be levels for the 15 organizational aspects of Enterprise Governance.',
   [SHEET_NAMES.MATURITY_PROFILE]:
-    'Your maturity profile, calculated: one row per capability area per dimension, with the ' +
-    'Technology sub-dimension means shown separately. Updates as you type.',
+    'Your maturity profile, calculated: one row per capability area per dimension, with As-Is and ' +
+    'To-Be scores, notes, barriers and advancement plans. Updates as you type.',
   [SHEET_NAMES.AREA_SCORES]:
     'One row per capability area: overall score, To-Be score, and how much of it you have completed.',
   [SHEET_NAMES.DOMAIN_SCORES]:
@@ -80,6 +81,9 @@ export const SHEET_DESCRIPTIONS: Readonly<Record<string, string>> = {
   [SHEET_NAMES.DIMENSION_SCORES]:
     'Your enterprise-wide score for each ORBIT dimension, with the number of capability areas ' +
     'each figure is averaged over.',
+  [SHEET_NAMES.CALCULATIONS]:
+    'The intermediate values behind the scores — unrounded means and the Technology ' +
+    'sub-dimension means. Reference only; nothing here is for you to fill in.',
 };
 
 // =============================================================================
@@ -433,20 +437,23 @@ export const SCORE_SOURCES = {
 /**
  * `06_Maturity_Profile` — one row per capability area per dimension. 216 rows.
  *
- * Two things about this column set look redundant and are not.
+ * The reviewer-facing profile: the three names, Score Source, As-Is, To-Be, Notes, Barriers and
+ * Advancement Plans — only what a state reads. Two sets of columns a state should not have to read
+ * were moved off this sheet to `10_Calculations` after pilot feedback that they were noise here:
+ * the intermediate scoring values (unrounded means and the Technology sub-dimension means) and the
+ * three ID columns (Domain ID, Capability Area ID, Dimension ID). The scoring values are **live
+ * inputs** the roll-ups consume, and the IDs are **criteria ranges** that `09` and the aggregate
+ * roll-up filter on, so both were relocated rather than deleted. See `CALCULATIONS_COLUMNS`.
  *
- * **Both a rounded and an unrounded score column.** The roll-ups above this sheet consume
- * different ones: a standard area averages the **rounded** dimension scores, while the
- * organizational area averages the **unrounded** section means. That inconsistency is the app's,
- * deliberately, and 5.4's rounding table is where it is written down. One column could not serve
- * both.
+ * Score Source stays here, not on `10`: it is meaningful to a reviewer (entered vs aggregate) and
+ * was never in the set pilot feedback asked to remove. The `09` and aggregate formulas use it as a
+ * criterion range on `06` while their ID criteria ranges point at `10` — Excel allows an
+ * `AVERAGEIFS` to mix sheets as long as every range is the same height, which the shared row
+ * alignment guarantees.
  *
- * **Four sub-dimension mean columns.** Technology is the mean of its two sub-dimension means with
- * the inner means unrounded, and a sub-dimension with nothing assessed is dropped rather than
- * zeroed. That drop cannot be expressed inline: `AVERAGE` ignores text inside a cell reference
- * but returns `#VALUE!` for text passed directly, so `AVERAGE(IFERROR(a,""),IFERROR(b,""))`
- * breaks the moment one sub-dimension is empty — a common partial state. Writing the means into
- * cells and averaging *those* gets the drop for free. They are also genuinely useful to read.
+ * Row order is identical to `10_Calculations`: both sheets are built from the same row sequence,
+ * so a profile row and its calculation row share a sheet row number, and a formula on `07` can
+ * reach either by the same `ProfileRowIndex` row.
  */
 export const MATURITY_PROFILE_COLUMNS: readonly ColumnDefinition[] = [
   { key: 'domainName', header: 'Capability Domain', width: COL_WIDTHS.medium },
@@ -455,12 +462,54 @@ export const MATURITY_PROFILE_COLUMNS: readonly ColumnDefinition[] = [
   { key: 'source', header: 'Score Source', width: COL_WIDTHS.flag, wrap: true },
   { key: 'currentScore', header: 'As-Is Score', width: COL_WIDTHS.level },
   { key: 'targetScore', header: 'To-Be Score', width: COL_WIDTHS.level },
+  { key: 'notes', header: 'Notes', width: COL_WIDTHS.notes, wrap: true },
+  { key: 'barriers', header: 'Barriers and Challenges', width: COL_WIDTHS.notes, wrap: true },
+  { key: 'plans', header: 'Advancement Plans', width: COL_WIDTHS.notes, wrap: true },
+];
+
+/**
+ * `10_Calculations` — the intermediate scoring values, one row per `06_Maturity_Profile` row.
+ *
+ * These used to sit on `06`; pilot feedback was that the sheet a state reads should show their
+ * profile, not the arithmetic behind it. They are not display noise that could simply be deleted
+ * — each is a cell a roll-up on `07` reads — so they moved here rather than away. Kept visible
+ * with real headers in their own table, not hidden on `06`, because a hidden column inside a table
+ * range conceals content from assistive technology and is exactly what 508 review flags (5.3).
+ *
+ * Why each column has to exist as a cell:
+ *
+ * **Both a rounded and an unrounded score.** The roll-ups consume different ones: a standard area
+ * averages the **rounded** dimension scores on `06`, while the organizational area averages the
+ * **unrounded** section means here. That inconsistency is the app's, deliberately — 5.4's rounding
+ * table is where it is written down. One column could not serve both.
+ *
+ * **Four sub-dimension mean columns.** Technology is the mean of its two sub-dimension means with
+ * the inner means unrounded, and a sub-dimension with nothing assessed is dropped rather than
+ * zeroed. That drop cannot be expressed inline: `AVERAGE` ignores text inside a cell reference but
+ * returns `#VALUE!` for text passed directly, so `AVERAGE(IFERROR(a,""),IFERROR(b,""))` breaks the
+ * moment one sub-dimension is empty — a common partial state. Writing the means into cells and
+ * averaging *those* gets the drop for free.
+ *
+ * The three ID columns live here, not on `06` — pilot feedback asked for them off the
+ * reviewer-facing profile. They serve two roles. For a reader, they let this sheet stand on its
+ * own. For the formulas, `09`'s enterprise-wide figure and the aggregate roll-up filter on the
+ * Dimension ID and Domain ID columns as `AVERAGEIFS`/`COUNTIFS` criteria ranges, so the IDs have
+ * to exist as cells somewhere; `06` dropping them means those criteria ranges point here.
+ *
+ * Note this is criteria matching, not row lookup: the cross-sheet value references (`07` reading a
+ * sub-dimension mean, say) still resolve by absolute row number, because `06` and `10` share row
+ * numbers by construction. That makes the two sheets a positional lockstep — reordering either one
+ * moves a row's figures out from under the formulas still pointing at that row, silently corrupting
+ * Technology scores, the organizational area score and every completion percentage. Both sheets are
+ * protected, so this is a constraint on anyone who unprotects them, not a live defect; it is not a
+ * sortable sheet.
+ */
+export const CALCULATIONS_COLUMNS: readonly ColumnDefinition[] = [
+  { key: 'domainName', header: 'Capability Domain', width: COL_WIDTHS.medium },
+  { key: 'areaName', header: 'Capability Area', width: COL_WIDTHS.medium },
+  { key: 'dimensionName', header: 'Dimension', width: COL_WIDTHS.medium },
   { key: 'aspectsAssessed', header: 'Aspects Assessed', width: COL_WIDTHS.flag },
-  {
-    key: 'currentUnrounded',
-    header: 'As-Is Unrounded',
-    width: COL_WIDTHS.level,
-  },
+  { key: 'currentUnrounded', header: 'As-Is Unrounded', width: COL_WIDTHS.level },
   { key: 'targetUnrounded', header: 'To-Be Unrounded', width: COL_WIDTHS.level },
   {
     key: 'infrastructureCurrent',
@@ -486,9 +535,6 @@ export const MATURITY_PROFILE_COLUMNS: readonly ColumnDefinition[] = [
     width: COL_WIDTHS.medium,
     wrap: true,
   },
-  { key: 'notes', header: 'Notes', width: COL_WIDTHS.notes, wrap: true },
-  { key: 'barriers', header: 'Barriers and Challenges', width: COL_WIDTHS.notes, wrap: true },
-  { key: 'plans', header: 'Advancement Plans', width: COL_WIDTHS.notes, wrap: true },
   { key: 'domainId', header: 'Domain ID', width: COL_WIDTHS.id, identifier: true },
   { key: 'areaId', header: 'Capability Area ID', width: COL_WIDTHS.id, identifier: true },
   { key: 'dimensionId', header: 'Dimension ID', width: COL_WIDTHS.id, identifier: true },

@@ -64,6 +64,7 @@ function summariseRowCounts(): Array<[string, number]> {
     [SHEET_NAMES.AREA_SCORES, computed[SHEET_NAMES.AREA_SCORES] ?? 0],
     [SHEET_NAMES.DOMAIN_SCORES, computed[SHEET_NAMES.DOMAIN_SCORES] ?? 0],
     [SHEET_NAMES.DIMENSION_SCORES, computed[SHEET_NAMES.DIMENSION_SCORES] ?? 0],
+    [SHEET_NAMES.CALCULATIONS, computed[SHEET_NAMES.CALCULATIONS] ?? 0],
   ];
 }
 

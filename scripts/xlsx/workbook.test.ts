@@ -137,7 +137,7 @@ const AA_NORMAL_TEXT = 4.5;
 // =============================================================================
 
 describe('workbook structure', () => {
-  it('contains exactly the six sheets this wave builds, in order', () => {
+  it('contains exactly the sheets this workbook builds, in order', () => {
     expect(workbook.worksheets.map((worksheet) => worksheet.name)).toEqual([...BUILT_SHEET_NAMES]);
   });
 
@@ -153,6 +153,36 @@ describe('workbook structure', () => {
     expect(sheet(SHEET_NAMES.CRITERIA_REFERENCE).rowCount).toBe(HEADER_ROW + 205);
     expect(sheet(SHEET_NAMES.ASSESSMENT_INPUT).rowCount).toBe(HEADER_ROW + 1625);
     expect(sheet(SHEET_NAMES.ORGANIZATIONAL_INPUT).rowCount).toBe(HEADER_ROW + 15);
+  });
+
+  /**
+   * The 06 <-> 10 lockstep, asserted on the *assembled* workbook rather than only on the row
+   * projections. Every relocated formula addresses `10_Calculations` by absolute row number and
+   * every cross-sheet `AVERAGEIFS` pairs its criteria ranges by index, so both depend on
+   * `06_Maturity_Profile` row N and `10_Calculations` row N being the same area and dimension in
+   * the generated file. The projection-level test in `profile-rows.test.ts` guards the row
+   * builders; this guards sheet assembly, which that test cannot see. A height divergence here
+   * would fail no formula in Excel — it would silently shrink the enterprise-wide averages and
+   * make absolute reads return a neighbouring area's number.
+   *
+   * The three name columns (Capability Domain, Capability Area, Dimension) are columns 1-3 on
+   * both sheets, so comparing them row for row is the whole check.
+   */
+  it('aligns 06_Maturity_Profile and 10_Calculations row for row in the built workbook', () => {
+    const profileSheet = sheet(SHEET_NAMES.MATURITY_PROFILE);
+    const calcSheet = sheet(SHEET_NAMES.CALCULATIONS);
+
+    expect(calcSheet.rowCount, 'sheet heights must match').toBe(profileSheet.rowCount);
+
+    for (let row = FIRST_DATA_ROW; row <= profileSheet.rowCount; row += 1) {
+      for (let column = 1; column <= 3; column += 1) {
+        const profileValue = cellText(profileSheet, row, column);
+        const calcValue = cellText(calcSheet, row, column);
+        expect(calcValue, `row ${row} column ${column}`).toBe(profileValue);
+      }
+      // Not blank, so a pair of empty cells cannot pass by matching each other.
+      expect(cellText(profileSheet, row, 1), `row ${row} not blank`).not.toBe('');
+    }
   });
 });
 

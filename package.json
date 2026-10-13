@@ -1,7 +1,7 @@
 {
   "name": "mita-4.0-ssa",
   "private": true,
-  "version": "4.1.1",
+  "version": "4.2.0",
   "type": "module",
   "description": "MITA 4.0 State Self-Assessment Tool using the ORBIT Maturity Model",
   "engines": {

@@ -188,10 +188,11 @@ artifacts are built from one model. Whether they always _compute_ identically is
 the workbook's scoring is a second implementation in Excel formulas, and no test here can evaluate a
 formula. See "Verifying it" below.
 
-The workbook has ten sheets: a README, three reference sheets, two input sheets covering all
-14 capability domains, 72 capability areas and 41 maturity aspects, and four calculated sheets
-that compute dimension, capability area, domain and enterprise-wide scores with Excel formulas
-mirroring the app's own scoring rules. It is built for Section 508 conformance — no merged
+The workbook has eleven sheets: a README, three reference sheets, two input sheets covering all
+14 capability domains, 72 capability areas and 41 maturity aspects, four calculated sheets that
+compute dimension, capability area, domain and enterprise-wide scores with Excel formulas mirroring
+the app's own scoring rules, and a final calculations sheet holding the intermediate values those
+four reference. It is built for Section 508 conformance — no merged
 cells, one header row per table, no blank rows, no images, and editable columns labelled in
 text rather than signalled by fill colour alone.
 
