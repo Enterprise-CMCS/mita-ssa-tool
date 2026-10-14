@@ -61,3 +61,6 @@ semantic-review/
 
 # Playwright MCP output: screenshots, console logs, accessibility snapshots
 .playwright-mcp/
+
+# Agent workflow output: multi-model review reports and run artifacts
+.agents/

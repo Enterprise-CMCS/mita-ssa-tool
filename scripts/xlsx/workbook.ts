@@ -38,6 +38,7 @@ import {
 import {
   AREA_SCORES_COLUMNS,
   ASSESSMENT_INPUT_COLUMNS,
+  CALCULATIONS_COLUMNS,
   CAPABILITY_REFERENCE_COLUMNS,
   COLORS,
   CRITERIA_REFERENCE_COLUMNS,
@@ -61,6 +62,8 @@ import {
   buildDimensionScoreRows,
   buildDomainScoreRows,
   buildMaturityProfileRows,
+  calculationRows,
+  maturityProfileRows,
   resolveAggregateFormulas,
 } from './profile-rows.ts';
 import type { InputExtents } from './scoring-spec.ts';
@@ -82,11 +85,10 @@ const README_LABEL_WIDTH = 34;
 const README_VALUE_WIDTH = 110;
 
 /**
- * Build the complete workbook.
- *
- * Sheets `06`-`09` are Wave 7. The README already lists them as not yet included, so
- * the Wave 6 artifact is internally consistent rather than pointing at tabs that do
- * not exist.
+ * Build the complete workbook: the README, three reference sheets, two input sheets, and the five
+ * computed sheets `06` through `10`. `10_Calculations` holds the intermediate values the earlier
+ * computed sheets reference and is emitted last; it shares `06`'s row order so cross-sheet
+ * references line up by row number.
  */
 export function buildWorkbook(): ExcelJS.Workbook {
   const workbook = new ExcelJS.Workbook();
@@ -141,13 +143,15 @@ export function buildWorkbook(): ExcelJS.Workbook {
 }
 
 /**
- * The four computed sheets, `06` through `09`.
+ * The five computed sheets, `06` through `10`.
  *
  * Built in dependency order and the order matters: `07` needs to know where each row landed on
- * `06`, `08` reads `07`, and `09` reads `06`. The profile row index threads that through rather
- * than each sheet recomputing addresses, because two independent derivations of "which row is
- * Provider Enrollment's Technology score" is exactly how a formula silently addresses the wrong
- * area.
+ * `06`, `08` reads `07`, and `09` reads `06`'s scores and Score Source together with `10`'s
+ * Dimension ID criteria range. `10_Calculations` is built from the same row sequence as `06`, so
+ * the two share row numbers and the cross-sheet references line up. The profile row index threads
+ * that through rather than each sheet recomputing addresses, because two independent derivations
+ * of "which row is Provider Enrollment's Technology score" is exactly how a formula silently
+ * addresses the wrong area.
  */
 function addComputedSheets(workbook: ExcelJS.Workbook, extents: InputExtents): void {
   const profile = buildMaturityProfileRows(extents);
@@ -156,7 +160,7 @@ function addComputedSheets(workbook: ExcelJS.Workbook, extents: InputExtents): v
   addTableSheet(workbook, {
     name: SHEET_NAMES.MATURITY_PROFILE,
     columns: MATURITY_PROFILE_COLUMNS,
-    rows: profile.rows,
+    rows: maturityProfileRows(profile),
     freezeColumns: 3,
   });
 
@@ -180,6 +184,18 @@ function addComputedSheets(workbook: ExcelJS.Workbook, extents: InputExtents): v
     columns: DIMENSION_SCORES_COLUMNS,
     rows: buildDimensionScoreRows(profile.lastRow),
     freezeColumns: 1,
+  });
+
+  // Last, because it is plumbing: the intermediate values the other computed sheets read — `07`
+  // for the Technology and organizational-area scores and completion, `06`'s own aggregate rows
+  // for the Domain/Dimension ID criteria, and `09` for the Dimension ID criteria range. Built
+  // from the same row sequence as `06`, so a given area/dimension sits on the same sheet row on
+  // both and the cross-sheet references line up.
+  addTableSheet(workbook, {
+    name: SHEET_NAMES.CALCULATIONS,
+    columns: CALCULATIONS_COLUMNS,
+    rows: calculationRows(profile),
+    freezeColumns: 3,
   });
 }
 

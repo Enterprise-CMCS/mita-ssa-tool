@@ -101,7 +101,9 @@ describe('raw OOXML: file inventory', () => {
       expect(sheetParts.get(name), name).toMatch(/^xl\/worksheets\/sheet\d+\.xml$/);
     }
     expect(sheetParts.size).toBe(Object.values(SHEET_NAMES).length);
-    expect(sheetParts.size).toBe(10);
+    // 11 since Wave 8+: the ten reviewer/score sheets plus 10_Calculations, which holds the
+    // intermediate scoring values moved off 06_Maturity_Profile.
+    expect(sheetParts.size).toBe(11);
   });
 
   /**

@@ -1033,6 +1033,31 @@ export const MUTATION_CASES: MutationCase[] = [
     test: 'rounds on the normalised decimal digits, not on the raw float',
     testFile: 'scripts/xlsx/halfway.test.ts',
   },
+  {
+    // The 06 <-> 10 row-alignment invariant. Reversing the calculations projection keeps its
+    // length and key set identical but moves every row off the profile row it must align with —
+    // the exact "tidy the plumbing sheet" shape that would corrupt scores silently in Excel. The
+    // alignment test compares a projection to its source, so a self-referential version of it
+    // would stay green here; this proves it does not.
+    assertion: 'the 06/10 row-alignment test actually catches a reordered calculations projection',
+    file: 'scripts/xlsx/profile-rows.ts',
+    find: `  return index.rows.map((row) => projectRow(row, (key) => calcKeys.has(key)));`,
+    replace: `  return index.rows.map((row) => projectRow(row, (key) => calcKeys.has(key))).reverse();`,
+    test: 'keeps 06_Maturity_Profile and 10_Calculations aligned row for row',
+    testFile: 'scripts/xlsx/profile-rows.test.ts',
+  },
+  {
+    // The projection-keys contract. Dropping a declared profile column must fail the test that
+    // pins the exact nine-column profile layout — otherwise an unwanted column change to the
+    // reviewer-facing sheet could ship unnoticed. Removing `plans` is a plausible edit, not an
+    // absurd one.
+    assertion: 'the projection-keys test actually catches a dropped profile column',
+    file: 'scripts/xlsx/constants.ts',
+    find: `  { key: 'plans', header: 'Advancement Plans', width: COL_WIDTHS.notes, wrap: true },\n];`,
+    replace: `];`,
+    test: 'projects exactly the declared columns onto each sheet',
+    testFile: 'scripts/xlsx/profile-rows.test.ts',
+  },
 ];
 
 /** Vitest colourises its summary, which defeats a naive regex over the output. */

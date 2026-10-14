@@ -911,7 +911,7 @@ run under `npm test`.
 | `scripts/xlsx/workbook.ts`            | ExcelJS assembly and the Section 508 structure                              |
 | `scripts/xlsx/paths.ts`               | Repository-root path resolution and the workbook output path                |
 | `scripts/xlsx/scoring-spec.ts`        | The scoring rules, as JS functions **and** as Excel formula generators      |
-| `scripts/xlsx/profile-rows.ts`        | Row builders for the four calculated sheets, `06`-`09`                      |
+| `scripts/xlsx/profile-rows.ts`        | Row builders for the five calculated sheets, `06`-`10`                      |
 | `scripts/xlsx/excel-rounding.ts`      | Model of Excel's `ROUND`, plus the fixtures that check the model            |
 | `scripts/xlsx/prove-assertions.ts`    | Mutation harness proving each assertion can fail                            |
 | `scripts/verify-workbook-artifact.ts` | Integrity check on the workbook that shipped into `dist/`                   |

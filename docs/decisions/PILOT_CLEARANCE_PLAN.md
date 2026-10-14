@@ -501,18 +501,19 @@ document title, which assistive tech announces on load regardless of the skip li
 Build-time Node script → `public/` → Vite copies to `dist/`. Sheet design adapted from
 the reference implementation, with the 508 corrections in 5.3 and the v4 model applied.
 
-| Sheet                         | Rows  | Purpose                                                                                         |
-| ----------------------------- | ----- | ----------------------------------------------------------------------------------------------- |
-| `00_README`                   | ~24   | Draft notice, model + app version, generation date, how to use, sheet index, Info Mgmt guidance |
-| `01_Maturity_Levels`          | 6     | Levels 1-5 plus N/A, names and descriptions                                                     |
-| `02_Capability_Reference`     | 72    | One row per area; domain name, layer, and domain description repeat as columns                  |
-| `03_ORBIT_Criteria_Reference` | 205   | 41 aspects x 5 levels: criteria text and suggested documentation                                |
-| `04_Assessment_Input`         | 1,625 | One row per assessable aspect per standard capability area                                      |
-| `05_Organizational_Input`     | 15    | The `enterprise-governance` aspects, with section as a column                                   |
-| `06_Maturity_Profile`         | 216   | One row per area and dimension: 213 standard (71 x 3) + 3 organizational section rows           |
-| `07_Area_Scores`              | 72    | One row per capability area: score, completion, domain                                          |
-| `08_Domain_Scores`            | 15    | 14 domain rows + 1 overall row                                                                  |
-| `09_Dimension_Scores`         | 3     | Enterprise-wide B/I/T figure, As-Is and To-Be, with the Areas denominator (Decision 17)         |
+| Sheet                         | Rows  | Purpose                                                                                                                                                                                                                        |
+| ----------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `00_README`                   | ~24   | Draft notice, model + app version, generation date, how to use, sheet index, Info Mgmt guidance                                                                                                                                |
+| `01_Maturity_Levels`          | 6     | Levels 1-5 plus N/A, names and descriptions                                                                                                                                                                                    |
+| `02_Capability_Reference`     | 72    | One row per area; domain name, layer, and domain description repeat as columns                                                                                                                                                 |
+| `03_ORBIT_Criteria_Reference` | 205   | 41 aspects x 5 levels: criteria text and suggested documentation                                                                                                                                                               |
+| `04_Assessment_Input`         | 1,625 | One row per assessable aspect per standard capability area                                                                                                                                                                     |
+| `05_Organizational_Input`     | 15    | The `enterprise-governance` aspects, with section as a column                                                                                                                                                                  |
+| `06_Maturity_Profile`         | 216   | One row per area and dimension: 213 standard (71 x 3) + 3 organizational section rows                                                                                                                                          |
+| `07_Area_Scores`              | 72    | One row per capability area: score, completion, domain                                                                                                                                                                         |
+| `08_Domain_Scores`            | 15    | 14 domain rows + 1 overall row                                                                                                                                                                                                 |
+| `09_Dimension_Scores`         | 3     | Enterprise-wide B/I/T figure, As-Is and To-Be, with the Areas denominator (Decision 17)                                                                                                                                        |
+| `10_Calculations`             | 216   | Intermediate values `06`, `07` and `09` reference: aspects-assessed counts, unrounded means, Technology sub-dimension means, and the three ID criteria ranges. Added post-pilot-feedback (see note below). Row-aligned to `06` |
 
 Row counts computed from `src/data/*.json`; regenerate if the model changes.
 
@@ -529,6 +530,20 @@ it in scope.
 row per area-and-dimension. Area, domain, and overall rollups go on `07`, `08` and `09`, each a
 clean single-header-row table. Technology sub-dimension means are extra **columns** on `06`,
 populated only on Technology rows — no extra rows, no merged cells.
+
+> **Superseded by 4.2.0 pilot feedback.** The subject-matter reviewers asked for the arithmetic
+> columns off `06` so the sheet a state reads shows only their profile. The aspects-assessed count,
+> the As-Is/To-Be unrounded means, and the four Technology sub-dimension means moved to a new
+> `10_Calculations` sheet (above). They are live formula inputs — `06`'s Technology score and `07`'s
+> organizational-area score, completion percentages and guards read them — so they were relocated,
+> not deleted. The three ID columns (Domain ID, Capability Area ID, Dimension ID) moved too, for the
+> same reason: `09`'s `AVERAGEIFS` and the aggregate resolution use them as criteria ranges, so they
+> had to exist as cells but did not have to sit on the reviewer-facing sheet. Score Source stayed on
+> `06` (it is meaningful to a reviewer and was not in the set pilot feedback flagged); the roll-up
+> formulas now use a Score Source criteria range on `06` alongside ID criteria ranges on `10`, which
+> Excel permits because the two sheets share row numbers and height. `10_Calculations` is built from
+> the same row sequence as `06`, which is how the cross-sheet references line up; the two sheets must
+> stay in lockstep and neither may be reordered.
 
 **`06` is 216 rows, not the 228 stated earlier.** This section previously specified "213
 standard rows + 15 organizational aspect rows", which contradicted its own "one row per

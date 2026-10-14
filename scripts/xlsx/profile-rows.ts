@@ -1,5 +1,5 @@
 /**
- * Row builders for the four computed sheets: `06` through `09`.
+ * Row builders for the five computed sheets: `06` through `10`.
  *
  * Separate from `rows.ts` because these rows hold **formulas** rather than values, which makes
  * them a different kind of thing to test: `rows.ts` output can be asserted against the model,
@@ -15,6 +15,7 @@
 import {
   AREA_SCORES_COLUMNS,
   ASSESSMENT_INPUT_COLUMNS,
+  CALCULATIONS_COLUMNS,
   FIRST_DATA_ROW,
   MATURITY_PROFILE_COLUMNS,
   ORGANIZATIONAL_INPUT_COLUMNS,
@@ -71,6 +72,31 @@ function formula(expression: string): FormulaCell {
   return { formula: expression };
 }
 
+/**
+ * The intermediate scoring fields that live on `10_Calculations`, not `06_Maturity_Profile`.
+ *
+ * The row builders below produce one unified row per area/dimension carrying every field;
+ * `maturityProfileRows` and `calculationRows` project each row onto its sheet, and `cellFor`
+ * routes a formula to whichever sheet holds the cell. A field is on the calculations sheet when
+ * it appears in `CALCULATIONS_COLUMNS` but not in `MATURITY_PROFILE_COLUMNS`; everything else
+ * (the two rounded scores, Score Source, Notes/Barriers/Plans) stays on the profile. The three
+ * name columns appear on both sheets and so are correctly excluded from this set; the three ID
+ * columns live only on `10_Calculations` and are therefore in it.
+ *
+ * Derived from the two column models rather than restated, so the set cannot drift from the
+ * sheet definitions: a field renamed or moved in `constants.ts` reshapes this automatically. Only
+ * the three name columns are shared between the sheets, so only they are excluded from this set.
+ */
+const CALCULATION_KEYS: ReadonlySet<string> = new Set(
+  CALCULATIONS_COLUMNS.map((column) => column.key).filter(
+    (key) => !MATURITY_PROFILE_COLUMNS.some((column) => column.key === key)
+  )
+);
+
+function isCalculationKey(key: string): boolean {
+  return CALCULATION_KEYS.has(key);
+}
+
 /** Text placed in a column that does not apply to this row, so no cell is ever empty. */
 const NOT_APPLICABLE = 'Not applicable';
 
@@ -98,9 +124,33 @@ function profileCell(key: string, row: number): string {
   return `'${SHEET_NAMES.MATURITY_PROFILE}'!$${letterOf(MATURITY_PROFILE_COLUMNS, key)}$${row}`;
 }
 
+/**
+ * A cell reference on `10_Calculations`, for a formula on another sheet.
+ *
+ * `10_Calculations` is built from the same row sequence as `06_Maturity_Profile`, so a given
+ * area/dimension sits on the same sheet row on both. The intermediate scoring values (unrounded
+ * means, Technology sub-dimension means) live here rather than on `06`, so the Technology score
+ * and the organizational area score reach them through this, not `profileCell`.
+ */
+function calcCell(key: string, row: number): string {
+  return `'${SHEET_NAMES.CALCULATIONS}'!$${letterOf(CALCULATIONS_COLUMNS, key)}$${row}`;
+}
+
 /** A whole-column range over `06_Maturity_Profile`'s data rows. */
 function profileRange(key: string, lastRow: number): string {
   return dataRange(SHEET_NAMES.MATURITY_PROFILE, letterOf(MATURITY_PROFILE_COLUMNS, key), lastRow);
+}
+
+/**
+ * A whole-column range over `10_Calculations`'s data rows.
+ *
+ * The ID columns (`domainId`, `areaId`, `dimensionId`) live here rather than on `06` after pilot
+ * feedback, so the aggregate roll-up and `09` reach them through this. `10` shares `06`'s row
+ * numbers and height, so an `AVERAGEIFS` whose average range is on `06` and whose ID criteria
+ * ranges are here is valid — Excel requires only that every range be the same height.
+ */
+function calcRange(key: string, lastRow: number): string {
+  return dataRange(SHEET_NAMES.CALCULATIONS, letterOf(CALCULATIONS_COLUMNS, key), lastRow);
 }
 
 /** A whole-column range over `07_Area_Scores`'s data rows. */
@@ -117,7 +167,37 @@ export interface ProfileRowIndex {
   /** `areaId|dimensionId` to its 1-based sheet row. */
   rowByKey: Map<string, number>;
   lastRow: number;
+  /**
+   * The unified rows, every field present. Aggregate resolution mutates these in place.
+   * `maturityProfileRows` and `calculationRows` project them onto the two sheets; the projection
+   * is by field name only, so both sheets keep the same row order and row numbers.
+   */
   rows: ComputedRow[];
+}
+
+/** The rows for `06_Maturity_Profile`: every field except the ones that moved to calculations. */
+export function maturityProfileRows(index: ProfileRowIndex): ComputedRow[] {
+  return index.rows.map((row) => projectRow(row, (key) => !isCalculationKey(key)));
+}
+
+/**
+ * The rows for `10_Calculations`: the moved intermediate fields and the three ID columns (both
+ * calculation-only), plus the three name columns it shares with `06` so the sheet reads on its own.
+ */
+export function calculationRows(index: ProfileRowIndex): ComputedRow[] {
+  const calcKeys = new Set(CALCULATIONS_COLUMNS.map((column) => column.key));
+  return index.rows.map((row) => projectRow(row, (key) => calcKeys.has(key)));
+}
+
+/** Keep only the fields a predicate accepts, preserving values and formula cells untouched. */
+function projectRow(row: ComputedRow, keep: (key: string) => boolean): ComputedRow {
+  const out: ComputedRow = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (keep(key)) {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 /**
@@ -181,13 +261,15 @@ function buildEnteredRow(
 
   const isTechnology = dimensionId === 'technology';
 
-  // The sub-dimension means live in this row's own cells, and Technology's score averages those
-  // cells rather than inlining their formulas. See the note in `technologyDimensionFormula` —
-  // referencing cells is what makes an unassessed sub-dimension drop instead of erroring.
-  const infrastructureCell = profileCell('infrastructureCurrent', sheetRow);
-  const applicationCell = profileCell('applicationCurrent', sheetRow);
-  const infrastructureTargetCell = profileCell('infrastructureTarget', sheetRow);
-  const applicationTargetCell = profileCell('applicationTarget', sheetRow);
+  // The sub-dimension means live in this row's own cells on `10_Calculations`, and Technology's
+  // score averages those cells rather than inlining their formulas. See the note in
+  // `technologyDimensionFormula` — referencing cells is what makes an unassessed sub-dimension
+  // drop instead of erroring. The row number is shared with `06`, so the same `sheetRow` indexes
+  // the calculation cell.
+  const infrastructureCell = calcCell('infrastructureCurrent', sheetRow);
+  const applicationCell = calcCell('applicationCurrent', sheetRow);
+  const infrastructureTargetCell = calcCell('infrastructureTarget', sheetRow);
+  const applicationTargetCell = calcCell('applicationTarget', sheetRow);
 
   const subDimensionCriteria = (subDimensionId: string): Array<{ key: string; value: string }> => [
     ...dimensionCriteria,
@@ -415,9 +497,12 @@ function organizationalTextJoinFormula(
  */
 export function resolveAggregateFormulas(index: ProfileRowIndex): void {
   const { lastRow } = index;
-  const dimensionIdRange = profileRange('dimensionId', lastRow);
+  // The ID criteria ranges live on `10_Calculations`; Score Source and the score average range
+  // stay on `06`. Both sheets share row numbers and height, so AVERAGEIFS/COUNTIFS mixing them is
+  // valid.
+  const dimensionIdRange = calcRange('dimensionId', lastRow);
   const sourceRange = profileRange('source', lastRow);
-  const domainIdRange = profileRange('domainId', lastRow);
+  const domainIdRange = calcRange('domainId', lastRow);
   const scoreRange = profileRange('currentScore', lastRow);
 
   for (const row of index.rows) {
@@ -495,12 +580,16 @@ export function buildAreaScoreRows(index: ProfileRowIndex): ComputedRow[] {
       ? ORGANIZATIONAL_SECTIONS
       : ORBIT_DIMENSION_IDS;
 
+    // A score cell by key. The seven intermediate values (the aspects-assessed count, both
+    // unrounded means, and the four Technology sub-dimension means) live on `10_Calculations`;
+    // the two rounded scores stay on `06`. Row numbers are shared between the two sheets, so the
+    // lookup is the same — only the sheet differs by key.
     const cellFor = (key: string, dimensionId: string): string => {
       const sheetRow = index.rowByKey.get(`${area.id}|${dimensionId}`);
       if (sheetRow === undefined) {
         throw new Error(`No profile row for ${area.id}|${dimensionId}`);
       }
-      return profileCell(key, sheetRow);
+      return isCalculationKey(key) ? calcCell(key, sheetRow) : profileCell(key, sheetRow);
     };
 
     const currentCells = dimensionIds.map((dimensionId) => cellFor(scoreKey, dimensionId));
@@ -630,7 +719,8 @@ function dedupeDomains(): Array<{ domain: { id: string; name: string; layer: str
  * on purpose, because the aggregate value really is in that cell.
  */
 export function buildDimensionScoreRows(profileLastRow: number): ComputedRow[] {
-  const dimensionIdRange = profileRange('dimensionId', profileLastRow);
+  // Dimension ID moved to `10_Calculations`; Score Source and the score ranges stay on `06`.
+  const dimensionIdRange = calcRange('dimensionId', profileLastRow);
   const sourceRange = profileRange('source', profileLastRow);
   const scoreRange = profileRange('currentScore', profileLastRow);
   const targetRange = profileRange('targetScore', profileLastRow);
@@ -663,11 +753,16 @@ function capitalise(value: string): string {
 /** Expected row counts, derived rather than written down, for the assertions to compare against. */
 export function expectedComputedRowCounts(): Record<string, number> {
   const standardAreas = getStandardAreasWithDomains().length;
+  // `06_Maturity_Profile` and `10_Calculations` are two projections of one row sequence, so they
+  // always have identical counts. Computed once here so the two cannot drift to different
+  // expectations in the function whose purpose is to be the derived source of truth for counts.
+  const profileRowCount =
+    standardAreas * ORBIT_DIMENSION_IDS.length + ORGANIZATIONAL_SECTIONS.length;
   return {
-    [SHEET_NAMES.MATURITY_PROFILE]:
-      standardAreas * ORBIT_DIMENSION_IDS.length + ORGANIZATIONAL_SECTIONS.length,
+    [SHEET_NAMES.MATURITY_PROFILE]: profileRowCount,
     [SHEET_NAMES.AREA_SCORES]: getAllAreasWithDomains().length,
     [SHEET_NAMES.DOMAIN_SCORES]: dedupeDomains().length + 1,
     [SHEET_NAMES.DIMENSION_SCORES]: ORBIT_DIMENSION_IDS.length,
+    [SHEET_NAMES.CALCULATIONS]: profileRowCount,
   };
 }

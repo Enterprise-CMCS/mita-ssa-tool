@@ -139,7 +139,7 @@ export function buildReadmeRows(): ReadmeRow[] {
     ),
     entry(
       'Scores update as you type',
-      `Sheets ${SHEET_NAMES.MATURITY_PROFILE} through ${SHEET_NAMES.DIMENSION_SCORES} calculate ` +
+      `Sheets ${SHEET_NAMES.MATURITY_PROFILE} through ${SHEET_NAMES.CALCULATIONS} calculate ` +
         'themselves from what you enter. You do not need to do anything to refresh them, and ' +
         'there is nothing on those sheets for you to fill in.'
     ),
@@ -289,11 +289,16 @@ export function buildReadmeRows(): ReadmeRow[] {
       'Filtering and sorting',
       'Use the filter buttons on the header row freely — filtering only hides rows, and every ' +
         'score is calculated over your whole sheet regardless of what is on screen. ' +
-        'Do not reorder rows. Every sheet in this workbook is protected, which prevents sorting, ' +
-        'and the calculated sheets identify your data partly by row position. If you unprotect a ' +
-        'sheet and sort it, the scores will still be correct but the Notes, Barriers and ' +
-        'Advancement Plans columns on ' +
-        `${SHEET_NAMES.MATURITY_PROFILE} will show text from the wrong capability areas.`
+        'Sorting is a different matter. On the input sheets you fill in, the scores find your ' +
+        'data by its ID columns, so sorting rows there leaves every score correct — but the ' +
+        'Notes, Barriers and Advancement Plans text on ' +
+        `${SHEET_NAMES.MATURITY_PROFILE} is matched by row position, so it would then show text ` +
+        'from the wrong capability area. ' +
+        `${SHEET_NAMES.MATURITY_PROFILE} and ${SHEET_NAMES.CALCULATIONS} are a stricter case: ` +
+        'they are aligned row for row and the scores read values from both by row number, so ' +
+        'sorting either one makes the scores themselves wrong. Every cell on those two sheets is ' +
+        'locked and they cannot be sorted while protected. The simplest rule: leave every sheet ' +
+        'in its original row order.'
     ),
 
     heading('Accessibility'),

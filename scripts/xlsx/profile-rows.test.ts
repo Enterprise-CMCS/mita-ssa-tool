@@ -32,10 +32,13 @@ import {
   buildDimensionScoreRows,
   buildDomainScoreRows,
   buildMaturityProfileRows,
+  calculationRows,
   expectedComputedRowCounts,
+  maturityProfileRows,
   resolveAggregateFormulas,
   type ComputedRow,
 } from './profile-rows.ts';
+import { CALCULATIONS_COLUMNS, MATURITY_PROFILE_COLUMNS } from './constants.ts';
 import type { InputExtents } from './scoring-spec.ts';
 
 /** The real extents, so snapshots reflect what actually ships. */
@@ -77,12 +80,136 @@ describe('row structure', () => {
     const built = profile();
     const expected = expectedComputedRowCounts();
 
-    expect(built.rows).toHaveLength(expected[SHEET_NAMES.MATURITY_PROFILE] as number);
+    expect(maturityProfileRows(built)).toHaveLength(
+      expected[SHEET_NAMES.MATURITY_PROFILE] as number
+    );
     expect(buildAreaScoreRows(built)).toHaveLength(expected[SHEET_NAMES.AREA_SCORES] as number);
     expect(buildDomainScoreRows(74)).toHaveLength(expected[SHEET_NAMES.DOMAIN_SCORES] as number);
     expect(buildDimensionScoreRows(built.lastRow)).toHaveLength(
       expected[SHEET_NAMES.DIMENSION_SCORES] as number
     );
+    expect(calculationRows(built)).toHaveLength(expected[SHEET_NAMES.CALCULATIONS] as number);
+  });
+
+  /**
+   * The invariant the whole relocation rests on: `10_Calculations` row N is the same area and
+   * dimension as `06_Maturity_Profile` row N. Every cross-sheet formula resolves a calculation
+   * value by absolute row number (`'10_Calculations'!$G$5`), so if the two projections ever
+   * disagreed on what sits at a given index — a future "tidy the plumbing sheet" edit that
+   * filtered `10_Calculations` down to only populated rows, say — Technology and organizational
+   * scores would read another area's figures while every formula-string snapshot stayed green,
+   * and the break would surface only in Excel.
+   *
+   * The three snapshot tests below pin formula strings generated from the column models, so they
+   * survive an alignment break by construction. This is the assertion that does not.
+   */
+  it('keeps 06_Maturity_Profile and 10_Calculations aligned row for row', () => {
+    const built = profile();
+    const profileRows = maturityProfileRows(built);
+    const calcRows = calculationRows(built);
+
+    // Both projections must agree, row by row, with each other and with the unified source — not
+    // merely be the same length. Checking only lengths would let a same-length reorder of either
+    // projection pass while silently moving a sheet's rows out from under the absolute cross-sheet
+    // references. The ID columns live only on `10`, so `10`'s identity is read from its own IDs;
+    // `06`'s identity is read from the three name columns it still carries, which both sheets and
+    // the source share.
+    expect(profileRows).toHaveLength(built.rows.length);
+    expect(calcRows).toHaveLength(built.rows.length);
+    for (const [index, sourceRow] of built.rows.entries()) {
+      const calcRow = calcRows[index] as ComputedRow;
+      const profileRow = profileRows[index] as ComputedRow;
+      const label = `row ${index + 1}`;
+
+      // 10's identity against the source, by ID (the authoritative key, present on 10 and source).
+      expect(String(calcRow.areaId), `${label} calc areaId`).toBe(String(sourceRow.areaId));
+      expect(String(calcRow.dimensionId), `${label} calc dimensionId`).toBe(
+        String(sourceRow.dimensionId)
+      );
+
+      // 06's identity against both the source and 10, by the name tuple all three carry — so a
+      // reorder of the 06 projection alone is caught, not just a length change.
+      const nameTuple = (row: ComputedRow): string =>
+        [row.domainName, row.areaName, row.dimensionName].map(String).join(' | ');
+      expect(nameTuple(profileRow), `${label} profile identity`).toBe(nameTuple(sourceRow));
+      expect(nameTuple(profileRow), `${label} profile vs calc identity`).toBe(nameTuple(calcRow));
+    }
+  });
+
+  /**
+   * Each projection emits exactly the keys its sheet's column model declares — no more, no fewer.
+   *
+   * A column defined with no backing field produces a *missing* cell (not an empty one), which
+   * the "writes no empty cell" test cannot see because there is no key to inspect; a field present
+   * in a row but absent from the column model is silently dropped from the workbook. Both are
+   * caught here by comparing the projected row's keys against the declared columns directly.
+   */
+  it('projects exactly the declared columns onto each sheet', () => {
+    const built = profile();
+
+    // Pinned literally, in order, rather than derived from the column models — the point of this
+    // test is to catch a change to those models, so deriving the expectation from them would make
+    // it self-referential (re-adding an ID column to the profile declaration would move both the
+    // projection and the expected set together, and the test would still pass). These are the
+    // stakeholder-facing contract: nine columns on `06`, with the three IDs and seven arithmetic
+    // helpers living only on `10`.
+    const EXPECTED_PROFILE_KEYS = [
+      'domainName',
+      'areaName',
+      'dimensionName',
+      'source',
+      'currentScore',
+      'targetScore',
+      'notes',
+      'barriers',
+      'plans',
+    ];
+    const EXPECTED_CALCULATION_KEYS = [
+      'domainName',
+      'areaName',
+      'dimensionName',
+      'aspectsAssessed',
+      'currentUnrounded',
+      'targetUnrounded',
+      'infrastructureCurrent',
+      'applicationCurrent',
+      'infrastructureTarget',
+      'applicationTarget',
+      'domainId',
+      'areaId',
+      'dimensionId',
+    ];
+
+    // The column models must match the pinned contract — so adding a column to a model without
+    // updating this test fails here rather than silently changing the shipped layout.
+    expect(MATURITY_PROFILE_COLUMNS.map((column) => column.key)).toEqual(EXPECTED_PROFILE_KEYS);
+    expect(CALCULATIONS_COLUMNS.map((column) => column.key)).toEqual(EXPECTED_CALCULATION_KEYS);
+
+    // Belt and braces: the three IDs must not be on the profile, and the seven helpers must not be.
+    for (const forbidden of [
+      'domainId',
+      'areaId',
+      'dimensionId',
+      'aspectsAssessed',
+      'currentUnrounded',
+      'targetUnrounded',
+      'infrastructureCurrent',
+      'applicationCurrent',
+      'infrastructureTarget',
+      'applicationTarget',
+    ]) {
+      expect(EXPECTED_PROFILE_KEYS, `${forbidden} must not be on 06`).not.toContain(forbidden);
+    }
+
+    // And every projected row carries exactly the pinned keys.
+    const profileKeys = new Set(EXPECTED_PROFILE_KEYS);
+    const calcKeys = new Set(EXPECTED_CALCULATION_KEYS);
+    for (const [index, row] of maturityProfileRows(built).entries()) {
+      expect(new Set(Object.keys(row)), `06 row ${index + 1}`).toEqual(profileKeys);
+    }
+    for (const [index, row] of calculationRows(built).entries()) {
+      expect(new Set(Object.keys(row)), `10 row ${index + 1}`).toEqual(calcKeys);
+    }
   });
 
   /**
@@ -170,8 +297,11 @@ describe('row structure', () => {
    */
   it('writes no empty cell on any computed sheet', () => {
     const built = profile();
+    // The actual projected rows for each sheet, not the unified superset — projection drops keys,
+    // so checking the superset would miss a column that lost its backing field on one sheet.
     const everySheet: Array<[string, ComputedRow[]]> = [
-      [SHEET_NAMES.MATURITY_PROFILE, built.rows],
+      [SHEET_NAMES.MATURITY_PROFILE, maturityProfileRows(built)],
+      [SHEET_NAMES.CALCULATIONS, calculationRows(built)],
       [SHEET_NAMES.AREA_SCORES, buildAreaScoreRows(built)],
       [SHEET_NAMES.DOMAIN_SCORES, buildDomainScoreRows(74)],
       [SHEET_NAMES.DIMENSION_SCORES, buildDimensionScoreRows(built.lastRow)],
@@ -280,8 +410,11 @@ describe('formula snapshots: 06_Maturity_Profile', () => {
       (candidate) =>
         candidate.dimensionId === 'technology' && candidate.source === SCORE_SOURCES.entered
     );
+    // The sub-dimension means live on 10_Calculations (columns G and H), not on 06, after the
+    // profile sheet was trimmed to the reviewer-facing columns. Technology's score references
+    // those cells by the shared row number.
     expect(formulaOf(row as ComputedRow, 'currentScore')).toBe(
-      "IFERROR(ROUND(AVERAGE('06_Maturity_Profile'!$J$5,'06_Maturity_Profile'!$K$5),1),\"\")"
+      "IFERROR(ROUND(AVERAGE('10_Calculations'!$G$5,'10_Calculations'!$H$5),1),\"\")"
     );
   });
 
@@ -544,15 +677,18 @@ describe('formula snapshots: 07, 08 and 09', () => {
     ) as ComputedRow;
     const expression = formulaOf(organizational, 'currentScore');
 
+    // The entered-count and the unrounded section means both moved to 10_Calculations
+    // (aspectsAssessed is column D, currentUnrounded is column E), so the organizational area
+    // score reads them there. Row numbers are shared with 06.
     expect(expression).toBe(
       'IF(SUM(' +
-        "'06_Maturity_Profile'!$G$216," +
-        "'06_Maturity_Profile'!$G$217," +
-        '\'06_Maturity_Profile\'!$G$218)=0,"",' +
+        "'10_Calculations'!$D$216," +
+        "'10_Calculations'!$D$217," +
+        '\'10_Calculations\'!$D$218)=0,"",' +
         'IFERROR(ROUND(AVERAGE(' +
-        "'06_Maturity_Profile'!$H$216," +
-        "'06_Maturity_Profile'!$H$217," +
-        '\'06_Maturity_Profile\'!$H$218),1),""))'
+        "'10_Calculations'!$E$216," +
+        "'10_Calculations'!$E$217," +
+        '\'10_Calculations\'!$E$218),1),""))'
     );
     expect(expression).not.toContain("'06_Maturity_Profile'!$E$");
   });
@@ -654,10 +790,15 @@ describe('formula snapshots: 07, 08 and 09', () => {
       expect(expression, String(row.dimensionId)).toContain(`"${SCORE_SOURCES.entered}"`);
     }
 
+    // Dimension ID moved off the profile sheet to 10_Calculations (column M) when the three ID
+    // columns were relocated, so it is now a cross-sheet criteria range. As-Is Score (E) is the
+    // average range and Score Source (D) the other criterion, both still on 06 — Excel allows an
+    // AVERAGEIFS whose average range and criteria ranges span different sheets, which is sound
+    // here because 06 and 10 share row numbers and height.
     expect(formulaOf(rows[0] as ComputedRow, 'currentScore')).toBe(
       'IFERROR(ROUND(AVERAGEIFS(' +
         "'06_Maturity_Profile'!$E$3:$E$218," +
-        '\'06_Maturity_Profile\'!$S$3:$S$218,"businessArchitecture",' +
+        '\'10_Calculations\'!$M$3:$M$218,"businessArchitecture",' +
         '\'06_Maturity_Profile\'!$D$3:$D$218,"Entered"),1),"")'
     );
   });
