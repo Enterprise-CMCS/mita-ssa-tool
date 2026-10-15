@@ -1729,3 +1729,42 @@ Fix is a responsive nav: a menu button below `sm` that collapses the four routes
 the nav buttons gone the brand takes the full width on one 32px line, so the `Toolbar` falls back to
 its 56px `minHeight` — 72px recovered, giving `<main>` ~359px. Not attempted in Wave 8: it is a
 layout change touching every page, and the wave was closing a deploy, not opening a redesign.
+
+### OBS-47 — GitHub Pages correctness depends on an unenforceable repository setting, and legacy mode is a silent two-publisher race
+
+**Confirmed** against the live repos: `gh api repos/Enterprise-CMCS/mita-ssa-tool/pages` returns
+`build_type: "legacy"` while `gh api repos/nickarrow/mita-ssa-tool/pages` returns `"workflow"`.
+
+The site is a Vite/React PWA deployed by `.github/workflows/deploy.yml` (build → upload-pages-artifact
+→ deploy-pages). For that workflow to be the publisher, Pages **Source** must be "GitHub Actions"
+(`build_type: workflow`). The setting lives in repository Settings, outside version control, and no
+committed file can set or enforce it — the central fact this observation exists to record.
+
+**Legacy mode is not "deploy.yml is bypassed."** That was the intuitive but wrong model (it shipped
+in the first draft of this fix and the review caught it). The verified mechanic: in `legacy` mode
+GitHub's built-in `pages build and deployment` (Jekyll) workflow runs _in addition to_ `deploy.yml`.
+Both publish to the same Pages site and **the last successful publish wins**. The upstream run list
+shows exactly this — `Deploy to GitHub Pages` succeeding on `push` one second apart from
+`pages build and deployment` failing on a `dynamic` event. Today the Jekyll build _fails_ (it trips
+on `slotProps={{ … }}` in this very file via Liquid), which is why the Vite artifact stays live; a
+failed build publishes nothing.
+
+Two traps follow:
+
+- **`.nojekyll` is not a free win here.** Adding it makes the Jekyll build _succeed_, and on an event
+  that triggers Jekyll but no Vite deploy (a `dynamic` event, a Settings touch, a manual re-run), it
+  would publish a raw render of the repo root — the unbuilt `index.html` with `%BASE_URL%` — which can
+  then win the race. The first draft added `.nojekyll` and it was dropped for this reason. The fix is
+  to correct the Source setting, not to quiet Jekyll.
+- **A content probe cannot detect the misconfiguration.** `verify-deployed-site.ts` fetched against
+  the misconfigured upstream exits 0, because the Vite deploy is currently winning, so the live bytes
+  _are_ the app. The decisive signal is the `build_type` field itself, which is why
+  `verify-pages-config.ts` (fail unless `build_type == workflow`) is the primary gate and the content
+  check is secondary.
+
+**How detection works, and its limits.** `verify-pages-config.ts` reads the API field; the standing
+monitor `verify-deployment.yml` runs it daily, on demand, and after each successful custom deploy.
+The limits are real and worth remembering before trusting the monitor: scheduled workflows are
+disabled in forks and auto-disable after 60 days of repository inactivity, and a failing run is a red
+X with no owner, not a notification. Treat the config check as the reliable gate; the schedule is a
+backstop. The checks detect and report — nothing rolls back a bad publish.

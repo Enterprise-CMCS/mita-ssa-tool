@@ -1,0 +1,112 @@
+# Standing monitor: is GitHub Pages configured correctly and serving the built app?
+#
+# Why this is a separate workflow, not a step in deploy.yml:
+#
+# The failure it guards against is Pages Source set to "Deploy from a branch" (build_type
+# "legacy") instead of "GitHub Actions" (build_type "workflow"). In legacy mode GitHub's built-in
+# Jekyll pipeline runs *alongside* deploy.yml; both publish to the same site and the last
+# successful publish wins. So a check that only runs as part of deploy.yml sees one publisher at
+# one instant and cannot see a later publish by the other. This workflow checks the setting itself
+# — which is decisive regardless of what is momentarily live — and also probes the live site, on a
+# schedule and after each custom deploy, so a drift to the wrong Source is caught even with no new
+# commits.
+#
+# Limits worth knowing (also in README > Deployment rather than hidden):
+#   - This triggers after the *custom* deploy (workflow_run on "Deploy to GitHub Pages"), not after
+#     GitHub's built-in "pages build and deployment" Jekyll run — which is the second publisher the
+#     whole design is about. It is unconfirmed whether workflow_run even fires for GitHub's
+#     auto-generated workflows, and the success/failure guard would invert for it (a *failing*
+#     Jekyll build is the benign case). So the moment a Jekyll publish clobbers the site is caught
+#     by the daily cron, up to 24h later, not instantly.
+#   - Scheduled workflows are disabled in forks and auto-disabled after 60 days of repository
+#     inactivity, and a failing run is a red X in the Actions tab, not a notification with an owner
+#     (GitHub emails scheduled-run failures to whoever last edited the cron line).
+# Treat the config check as the reliable gate; the schedule is a backstop, not the primary alarm.
+
+name: Verify deployment
+
+on:
+  # Backstop: catch a Source that drifted even with no new commits. Daily, not weekly, to keep the
+  # worst-case detection window short.
+  schedule:
+    - cron: '0 12 * * *' # every day at 12:00 UTC
+  # Run on demand, optionally against an explicit URL (e.g. a fork's Pages site).
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Site URL to verify (defaults to this repo's Pages URL)"
+        required: false
+        type: string
+  # Re-check shortly after a custom deploy completes, independent of the deploy job itself. Only
+  # successful deploys are worth verifying — see the conclusion guard on the job.
+  workflow_run:
+    workflows: ['Deploy to GitHub Pages']
+    types: [completed]
+
+# pages: read is what the build_type config check needs; contents: read for the checkout.
+permissions:
+  contents: read
+  pages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # On a workflow_run trigger, only verify a deploy that actually succeeded — otherwise a failed
+    # deploy would draw a second, misleading red run. A schedule or workflow_dispatch event has no
+    # workflow_run payload, so it satisfies the first operand (event_name != 'workflow_run') and
+    # runs; only the workflow_run path is gated on conclusion == 'success'.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      # Primary gate: the Pages Source setting. Decisive and independent of what is live. It also
+      # emits the canonical site URL (from the API's html_url) as an output, so the content check
+      # probes the real site instead of reconstructing a URL that a user-site or custom-domain repo
+      # would get wrong.
+      - name: Verify Pages Source is GitHub Actions
+        id: config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npm run verify:pages-config
+
+      # Resolve the site URL to probe: an explicit dispatch input wins; otherwise the API html_url
+      # from the step above. The input is passed through env and validated for an http(s) scheme AND
+      # the absence of control characters, so it can neither inject shell nor forge extra
+      # $GITHUB_OUTPUT records via an embedded newline.
+      - name: Resolve site URL
+        id: url
+        env:
+          INPUT_URL: ${{ inputs.url }}
+          CONFIG_URL: ${{ steps.config.outputs.html_url }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_URL}" ]; then
+            case "${INPUT_URL}" in
+              *[$'\n\r']*) echo "::error::url input must be a single line"; exit 1 ;;
+            esac
+            case "${INPUT_URL}" in
+              https://*|http://*) ;;
+              *) echo "::error::url input must be an http(s) URL"; exit 1 ;;
+            esac
+            printf 'value=%s\n' "${INPUT_URL}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${CONFIG_URL}" ]; then
+            printf 'value=%s\n' "${CONFIG_URL}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::no site URL: pass the url input or ensure Pages returns an html_url"
+            exit 1
+          fi
+
+      # Secondary: confirm the live site is actually serving a Vite-built page. The URL is passed
+      # via env, never interpolated into the shell command.
+      - name: Verify the live site is the app
+        env:
+          SITE_URL: ${{ steps.url.outputs.value }}
+        run: npm run verify:deployed-site

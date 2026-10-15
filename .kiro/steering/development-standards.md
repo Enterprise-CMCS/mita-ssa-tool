@@ -916,6 +916,9 @@ run under `npm test`.
 | `scripts/xlsx/prove-assertions.ts`    | Mutation harness proving each assertion can fail                            |
 | `scripts/verify-workbook-artifact.ts` | Integrity check on the workbook that shipped into `dist/`                   |
 | `scripts/verify-workbook-in-excel.ts` | Arithmetic verification by driving Excel over AppleScript                   |
+| `scripts/verify-pages-config.ts`      | Fails unless GitHub Pages `build_type` is `workflow` (Source correct)       |
+| `scripts/verify-deployed-site.ts`     | Fails unless a deployed URL serves a Vite-built page (asset-bundle marker)  |
+| `scripts/ci-annotations.ts`           | Emits `::error::` / step-summary output when running in GitHub Actions      |
 
 ### Verifying workbook changes
 

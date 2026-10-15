@@ -30,14 +30,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        # 22.18 is the floor, not a preference — see the note in ci.yml. Wave 8 adds the
-        # workbook generator to `npm run build`, which this workflow runs, so the deploy
-        # environment has to be able to execute a TypeScript file directly. Bumped in
-        # this wave rather than in Wave 8 so that CI and deploy never disagree about the
-        # runtime they validate against.
+        # Node floor is single-sourced from .nvmrc — see the note in ci.yml for why 22.18 is a
+        # floor, not a preference (the workbook generator needs native TypeScript type stripping).
         uses: actions/setup-node@v4
         with:
-          node-version: '22.18'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -101,6 +98,24 @@ jobs:
       - name: Verify the shipped workbook
         run: npm run verify:workbook-artifact
 
+      # Assert the built index.html carries the Vite build markers BEFORE publishing, so a build
+      # that somehow emitted a bundle-less page (or left an unreplaced %BASE_URL% placeholder) is
+      # caught here rather than after it is live. This is the one marker check that can actually
+      # prevent a bad publish; the post-deploy and standing-monitor checks only report after the
+      # fact. Pre-deploy is a local file, so it is a grep, not a fetch.
+      - name: Verify the built index.html is the app
+        run: |
+          index="dist/index.html"
+          if ! grep -q '/assets/index-' "$index"; then
+            echo "::error::$index has no /assets/index- bundle — the build did not produce an app page."
+            exit 1
+          fi
+          if grep -q '%BASE_URL%' "$index"; then
+            echo "::error::$index still contains the %BASE_URL% placeholder — Vite base substitution did not run."
+            exit 1
+          fi
+          echo "Built index.html carries the Vite build markers."
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
@@ -109,14 +124,58 @@ jobs:
         with:
           path: ./dist
 
-  # Deployment job
+  # Deployment job — only deploys. Verification is a separate job (below) so that a verification
+  # failure is reported as "Verify deployment — failure", not as a broken deploy on a run whose
+  # publish actually succeeded.
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # Verification job
+  #
+  # Repository Settings -> Pages -> Source should be "GitHub Actions" (build_type "workflow"). If
+  # it is "Deploy from a branch" (build_type "legacy") instead, GitHub's built-in Jekyll pipeline
+  # runs *in addition to* this workflow — both publish to the same site and the last successful
+  # publish wins — so on an event that triggers Jekyll but no Vite deploy, a raw source render can
+  # become what is live. A committed file cannot change that setting, so these checks detect it: the
+  # config check reads the Pages build_type directly (the primary signal), and the content check
+  # confirms what is live right now. verify-deployment.yml keeps watching after this run ends.
+  verify:
+    runs-on: ubuntu-latest
+    needs: deploy
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      # Primary gate: the Pages Source setting itself — decisive regardless of what is live. `gh`
+      # is preinstalled on the runner; GH_TOKEN carries this job's pages:read.
+      - name: Verify Pages Source is GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npm run verify:pages-config
+
+      # Secondary: fetch what was just published (cache-busted with the commit SHA to bypass the
+      # edge cache) and confirm a Vite-built page is served. Catches a publish that produced the
+      # wrong bytes, which the config field cannot see. The URL is passed via env, never
+      # interpolated into the shell command.
+      - name: Verify the deployed site is the app
+        env:
+          SITE_URL: ${{ needs.deploy.outputs.page_url }}?v=${{ github.sha }}
+        run: npm run verify:deployed-site

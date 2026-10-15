@@ -178,7 +178,52 @@ npm run test:coverage # Coverage report
 npm run generate:workbook         # Generate public/mita-4.0-self-assessment-workbook.xlsx
 npm run verify:workbook-artifact  # Check the workbook that shipped into dist/
 npm run verify:workbook-excel     # Verify its formulas by driving Excel (macOS + Excel only)
+
+# Deployment (see "Deployment" below)
+npm run verify:pages-config -- owner/repo                                 # Check Pages Source is "GitHub Actions"
+npm run verify:deployed-site -- https://<owner>.github.io/mita-ssa-tool/  # Check a live site is the app
 ```
+
+## Deployment
+
+The app deploys to GitHub Pages via `.github/workflows/deploy.yml`, which builds with Vite and
+publishes `dist/`. It runs on push to `main` and can be triggered manually from the Actions tab.
+
+> **GitHub Pages Source must be "GitHub Actions."** In repository Settings → Pages → Build and
+> deployment, the Source has to be **GitHub Actions** (`build_type: workflow`), not **Deploy from a
+> branch** (`build_type: legacy`). This is a Vite/React PWA, not a Jekyll site. In "Deploy from a
+> branch" mode, GitHub's built-in **Jekyll** pipeline runs _in addition to_ `deploy.yml` — both
+> publish to the same site and **the last successful publish wins**. The Jekyll build either fails
+> on template-like braces in our Markdown docs (a red build) or, worse, succeeds and publishes a
+> raw render of the source files that can beat the Vite deploy to the live URL on events where only
+> Jekyll runs. No committed file can change this setting; the checks below detect it instead.
+
+Three checks guard the deployment. **They detect and report — none of them rolls anything back.** A
+failing check means a human must fix the Source setting and re-run the deploy; nothing is reverted
+in the meantime. What "the live site" is doing while the setting is wrong depends on the case: most
+often the Vite deploy is still winning the race so the correct bytes are live and the failure is a
+_latent_ risk (this is the upstream situation today — `build_type: legacy` with the right site
+live); but on an event where only Jekyll publishes, a raw source render can be what users hit.
+
+- **Pre-deploy (prevents a bad publish):** `deploy.yml` asserts the built `dist/index.html` carries
+  the Vite markers before uploading, so a build that produced a bundle-less page never ships.
+- **Pages Source config (the primary signal):** `scripts/verify-pages-config.ts` reads the Pages
+  `build_type` via the GitHub API and fails unless it is `workflow`. This is decisive regardless of
+  what is momentarily live, needs no running site, and is immune to CDN caching. Run after each
+  deploy and by the standing monitor.
+- **Live content (secondary):** `scripts/verify-deployed-site.ts` fetches the site and fails unless
+  it carries the Vite build markers. This catches a publish that produced the wrong _bytes_, which
+  the config field cannot see.
+
+`.github/workflows/verify-deployment.yml` runs the config and content checks on a daily schedule,
+on demand, and after each successful custom deploy. Honest limits: it does **not** fire after
+GitHub's built-in Jekyll publish (so a Jekyll clobber is caught by the daily cron, up to 24h later,
+not instantly); scheduled workflows are disabled in forks and auto-disabled after 60 days of
+repository inactivity; and GitHub emails a scheduled-run failure only to the account that last
+edited the cron line — after a merge that is plausibly the PR author, not an upstream maintainer. So
+treat the config check as the reliable gate and the schedule as a backstop. You can run either check
+locally (both need the GitHub CLI installed and authenticated — `gh auth login`):
+`npm run verify:pages-config -- owner/repo` and `npm run verify:deployed-site -- <url>`.
 
 ## Offline Excel Workbook
 
