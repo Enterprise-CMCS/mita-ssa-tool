@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Deployment/CI hardening only. **Nothing about the shipped application changed** — no version bump,
+because no byte a user receives is different. Recorded because it changes how a broken deployment is
+caught.
+
+### Fixed
+
+- **GitHub Pages deployment is now guarded against the wrong "Source" setting.** The symptom was a
+  failing Jekyll build: when Pages Source is "Deploy from a branch" (`build_type: legacy`) rather
+  than "GitHub Actions", GitHub runs its built-in Jekyll pipeline alongside the Vite deploy, and
+  Jekyll trips over template-like braces in the Markdown docs. The deeper risk is that both
+  pipelines publish to the same site and the last successful publish wins, so a raw source render
+  can reach the live URL. The Source is a repository setting no committed file can change, so this
+  adds detection instead:
+  - `scripts/verify-pages-config.ts` reads the Pages `build_type` and fails unless it is
+    `workflow` — the decisive, cache-immune signal, run after each deploy and on a daily schedule.
+  - `scripts/verify-deployed-site.ts` fetches the live site and fails unless it carries the Vite
+    build markers, catching a publish that produced the wrong bytes.
+  - `deploy.yml` asserts the built `dist/index.html` before upload (preventing a bundle-less
+    publish), runs verification in a separate job so a check failure is not mislabeled as a broken
+    deploy, and (with `ci.yml`) single-sources the Node version from `.nvmrc`.
+  - `.github/workflows/verify-deployment.yml` runs the two checks as a standing monitor.
+  - These checks detect and report; they do not roll back a bad deployment. See README → Deployment.
+
 ## [4.2.0] - 2026-10-13
 
 Applies the first round of pilot stakeholder feedback on the maturity criteria and the offline

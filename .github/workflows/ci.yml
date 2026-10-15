@@ -18,14 +18,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        # 22.18 is the floor, not a preference: the XLSX workbook generator is a
-        # TypeScript file run directly by Node, which needs Node's native type
-        # stripping (unflagged from 22.18). On Node 20 it fails with an
-        # unknown-file-extension error. Kept in step with `.nvmrc` and the `engines`
-        # field in package.json.
+        # Node floor is single-sourced from `.nvmrc` (and mirrored in package.json `engines`).
+        # It is a floor, not a preference: the XLSX workbook generator is a TypeScript file run
+        # directly by Node, which needs Node's native type stripping (unflagged from 22.18). On
+        # Node 20 it fails with an unknown-file-extension error.
         uses: actions/setup-node@v4
         with:
-          node-version: '22.18'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
